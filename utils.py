@@ -1,17 +1,12 @@
 import os
-import torchvision
+import torch
+import numpy as np
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, random_split
-import numpy as np
-import torch
 import matplotlib.pyplot as plt
 from PIL import Image
 
 DATA_DIR = "./data/"
-BIAS_DIR = "./data/biased_mnist/"
-NUM_CLIENTS = 15
-CLASSES_PER_CLIENT = 5
-SPURIOUS_FEATURE_PROB = 0.9
 
 COLOR_MAP = {
     0: (255, 0, 0),  # Red
@@ -26,20 +21,27 @@ COLOR_MAP = {
     9: (255, 192, 203)  # Pink
 }
 
+NEW_COLOR_MAP = {
+    0: (0, 255, 0),  # Green
+    1: (255, 0, 0),  # Red
+    2: (255, 255, 0),  # Yellow
+    3: (0, 0, 255),  # Blue
+    4: (0, 255, 255),  # Cyan
+    5: (255, 0, 255),  # Magenta
+    6: (128, 0, 128),  # Purple
+    7: (255, 165, 0),  # Orange
+    8: (255, 192, 203),  # Pink
+    9: (165, 42, 42)  # Brown
+}
 
 def expand_grayscale_to_rgb(image):
-    """
-    :param image: Single-channel grayscale image (original mnist)
-    :return: 3-channel RGB image (by repeating the grayscale channel)
-    """
     return image.repeat(3, 1, 1)
 
-def colorize_digit(image, label):
-    label = label.item()  # Convert tensor to integer
-    color = COLOR_MAP[label]
-    image = expand_grayscale_to_rgb(image) # Ensure the image is in RGB format
+def colorize_digit(image, label, color_map):
+    label = label.item()
+    color = color_map[label]
+    image = expand_grayscale_to_rgb(image)
     image = transforms.ToPILImage()(image)
-    image = image.convert("RGB")
     np_image = np.array(image)
 
     color_mask = np.full_like(np_image, color, dtype=np.uint8)
@@ -49,23 +51,17 @@ def colorize_digit(image, label):
 
     return transforms.ToTensor()(colorized_image)
 
-
 class ColorizedMNIST(datasets.MNIST):
-    def __init__(self, root, train=True, transform=None, target_transform=None, download=False, colorize=False):
+    def __init__(self, root, train=True, transform=None, target_transform=None, download=False, color_map=COLOR_MAP):
         super().__init__(root, train=train, transform=transform, target_transform=target_transform, download=download)
-        self.colorize = colorize
-        if self.colorize:
-            self.data = torch.stack([colorize_digit(img, lbl) for img, lbl in zip(self.data, self.targets)])
-        else:
-            self.data = torch.stack([expand_grayscale_to_rgb(img) for img in self.data])
+        self.data = torch.stack([colorize_digit(img, lbl, color_map) for img, lbl in zip(self.data, self.targets)])
 
     def __getitem__(self, index):
         img, target = self.data[index], int(self.targets[index])
 
-        if not self.colorize:
-            img = transforms.ToPILImage()(img) # converting tensor to PIL Image
-
         if self.transform is not None:
+            if isinstance(img, torch.Tensor):
+                img = transforms.ToPILImage()(img)
             img = self.transform(img)
 
         if self.target_transform is not None:
@@ -73,88 +69,135 @@ class ColorizedMNIST(datasets.MNIST):
 
         return img, target
 
-
-def mnist_loader(val_split=0.2, batch_size=5, colorize=False):
-    """
-    Loads the MNIST data into 3 sets: train, validation, and testing.
-    :param val_split: float value to decide the train/val split.
-    :param batch_size: int defining the batch size of the dataset.
-    :param colorize: boolean to decide if the dataset should be colorized.
-    :return:
-    """
+def mnist_loader(val_split=0.2, batch_size=5):
     transform = transforms.Compose([transforms.ToTensor()])
 
-    # load the dataset
-    train_dataset = ColorizedMNIST(root=DATA_DIR + "mnist", train=True, download=True, transform=transform,
-                                   colorize=colorize)
-    test_dataset = ColorizedMNIST(root=DATA_DIR + "mnist", train=False, download=True, transform=transform,
-                                  colorize=colorize)
+    train_dataset = datasets.MNIST(root=DATA_DIR + "mnist", train=True, download=True, transform=transform)
+    test_dataset = datasets.MNIST(root=DATA_DIR + "mnist", train=False, download=True, transform=transform)
 
-    # Shuffle and split train and validation set
     val_size = int(val_split * len(train_dataset))
     train_size = len(train_dataset) - val_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
 
-    # Define dataloader
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     print("-" * 30 + "MNIST DATASET" + "-" * 30)
-    print(f"Train Set size: {len(train_dataset)}")
-    print(f"Validation Set size: {len(val_dataset)}")
-    print(f"Test Set size: {len(test_dataset)}")
+    print("Train Set size: ", len(train_dataset))
+    print("Validation Set size: ", len(val_dataset))
+    print("Test Set size: ", len(test_dataset))
 
     return train_dataloader, val_dataloader, test_dataloader
 
+def color_mnist_loader(val_split=0.2, batch_size=5):
+    transform = transforms.Compose([transforms.ToTensor()])
 
-def load_dataset(val_split=0.2, batch_size=5, dataset="mnist", colorize=False):
-    """
-    Loads the mnist dataset
-    :param val_split:
-    :param batch_size:
-    :param dataset: Input dataset used to further call the required function to load dataset.
-        This will become useful once the altered MNIST with spurious correlations is used.
-    :param colorize: Boolean to decide whether to color mnnist or not.
-    :return datasets: Returns the dataloader iterator for the required dataset.
-    """
+    train_dataset = ColorizedMNIST(root=DATA_DIR + "color_mnist", train=True, download=True, transform=transform)
+    test_dataset = ColorizedMNIST(root=DATA_DIR + "color_mnist", train=False, download=True, transform=transform)
+
+    val_size = int(val_split * len(train_dataset))
+    train_size = len(train_dataset) - val_size
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
+
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    print("-" * 30 + "COLORIZED MNIST DATASET" + "-" * 30)
+    print("Train Set size: ", len(train_dataset))
+    print("Validation Set size: ", len(val_dataset))
+    print("Test Set size: ", len(test_dataset))
+
+    return train_dataloader, val_dataloader, test_dataloader
+
+def grayscale_mnist_3_channels_loader(val_split=0.2, batch_size=5):
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Lambda(lambda x: x.repeat(3, 1, 1))])
+
+    train_dataset = datasets.MNIST(root=DATA_DIR + "grayscale_mnist_3_channels", train=True, download=True, transform=transform)
+    test_dataset = datasets.MNIST(root=DATA_DIR + "grayscale_mnist_3_channels", train=False, download=True, transform=transform)
+
+    val_size = int(val_split * len(train_dataset))
+    train_size = len(train_dataset) - val_size
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
+
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    print("-" * 30 + "GRAYSCALE MNIST 3 CHANNELS DATASET" + "-" * 30)
+    print("Train Set size: ", len(train_dataset))
+    print("Validation Set size: ", len(val_dataset))
+    print("Test Set size: ", len(test_dataset))
+
+    return train_dataloader, val_dataloader, test_dataloader
+
+def bias_conflicting_mnist_loader(val_split=0.2, batch_size=5):
+    transform = transforms.Compose([transforms.ToTensor()])
+
+    train_dataset = ColorizedMNIST(root=DATA_DIR + "bias_conflicting_mnist", train=True, download=True, transform=transform, color_map=NEW_COLOR_MAP)
+    test_dataset = ColorizedMNIST(root=DATA_DIR + "bias_conflicting_mnist", train=False, download=True, transform=transform, color_map=NEW_COLOR_MAP)
+
+    val_size = int(val_split * len(train_dataset))
+    train_size = len(train_dataset) - val_size
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
+
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    print("-" * 30 + "BIAS CONFLICTING MNIST DATASET" + "-" * 30)
+    print("Train Set size: ", len(train_dataset))
+    print("Validation Set size: ", len(val_dataset))
+    print("Test Set size: ", len(test_dataset))
+
+    return train_dataloader, val_dataloader, test_dataloader
+
+def load_dataset(val_split=0.2, batch_size=5, dataset="mnist", color_map=COLOR_MAP):
     if dataset == "mnist":
-        return mnist_loader(val_split, batch_size, colorize)
+        return mnist_loader(val_split, batch_size)
+    if dataset == "color_mnist":
+        return color_mnist_loader(val_split, batch_size)
+    if dataset == "grayscale_mnist_3_channels":
+        return grayscale_mnist_3_channels_loader(val_split, batch_size)
+    if dataset == "bias_conflicting_mnist":
+        return bias_conflicting_mnist_loader(val_split, batch_size)
 
-
-def visualize_dataset(dataloaders, titles=["Train Set", "Validation Set", "Test Set"]):
-    """
-    Displays 5 images from each set.
-    :param dataloaders: List of dataloaders for train, validation, and test sets.
-    :param titles: Titles for each dataset visualization.
-    """
+def visualize_dataset(dataloaders, titles=["Train Set", "Validation Set", "Test Set"], grayscale=True):
     fig, axes = plt.subplots(3, 5, figsize=(20, 15))
     for i, dataloader in enumerate(dataloaders):
         data_iter = iter(dataloader)
         images, labels = next(data_iter)
 
-        # Debug: Print out the shape and type of the images
-        print(f"Dataset: {titles[i]}")
-        print(f"Image batch shape: {images.shape}")
-        print(f"Image type: {type(images[0])}")
-
         for j in range(5):
-            #img = transforms.ToPILImage()(images[j])
             img = images[j]
-            axes[i, j].imshow(img)
+            print(f"Image {j} shape: {img.shape}")  # Print the shape to verify the number of channels
+            if isinstance(img, torch.Tensor):
+                img = img.permute(1, 2, 0)  # Convert tensor to (height, width, channels) format for visualization
+            if grayscale:
+                axes[i, j].imshow(img[:, :, 0], cmap='gray')  # Display only one channel for grayscale
+            else:
+                axes[i, j].imshow(img)
             axes[i, j].axis('off')
-            # Debug: Print out the label to check which digit it is
             print(f"Image {j} label: {labels[j]}")
 
         axes[i, 0].set_ylabel(titles[i], fontsize=16)
 
     plt.show()
 
-
 if __name__ == "__main__":
-    train_gray, val_gray, test_gray = load_dataset(colorize=False)
-    visualize_dataset([train_gray, val_gray, test_gray], titles=["Gray Train", "Gray Val", "Gray Test"])
+    train, validation, test = load_dataset(dataset="mnist")
+    visualize_dataset([train, validation, test],
+                      titles=["Grayscale Train Set", "Grayscale Validation Set", "Grayscale Test Set"], grayscale=False)
 
-    train, validation, test = load_dataset(colorize=True)
-    visualize_dataset([train, validation, test], titles=["Color Train", "Color Val", "Color Test"])
+    train_color, val_color, test_color = load_dataset(dataset="color_mnist")
+    visualize_dataset([train_color, val_color, test_color],
+                      titles=["Colorized Train Set", "Colorized Validation Set", "Colorized Test Set"], grayscale=False)
 
+    train_3gray, val_3gray, test_3gray = load_dataset(dataset="grayscale_mnist_3_channels")
+    visualize_dataset([train_3gray, val_3gray, test_3gray],
+                      titles=["3gray Train Set", "3gray Validation Set", "3gray Test Set"], grayscale=False)
+
+    train_conflicting, val_conflicting, test_conflicting = load_dataset(dataset="bias_conflicting_mnist")
+    visualize_dataset([train_conflicting, val_conflicting, test_conflicting],
+                      titles=["Conflicting Train Set", "Conflicting Validation Set", "Conflicting Test Set"], grayscale=False)
