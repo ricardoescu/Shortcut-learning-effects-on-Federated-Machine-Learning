@@ -7,20 +7,21 @@ from tqdm import tqdm
 from CNN import CNN
 from utils import load_dataset, visualize_dataset
 import copy
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import random_split, Subset
 import matplotlib.pyplot as plt
+import psutil
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
-NUM_EPOCHS = 1
+
+NUM_EPOCHS = 3
 LOCAL_ITERS = 1
 VIS_DATA = False
 BATCH_SIZE = 10
-NUM_CLIENTS = 2
+NUM_CLIENTS = 4
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Device: {DEVICE}")
-exp_num = 1
-
-#DATASET = "grayscale_mnist_3_channels"
-#DATASET = "color_mnist"
+exp_num = 2
+apply_l2 = True
 
 
 def FedAvg(params):
@@ -36,7 +37,8 @@ def FedAvg(params):
         global_params[key] = torch.div(global_params[key], len(params))
     return global_params
 
-def train(local_model, device, dataset, iters):
+
+def train(local_model, device, dataset, iters, apply_l2=apply_l2, lambda_l2=0.01):
     """
     Trains a local model for a given client.
     :param local_model: A copy of global CNN model required for training
@@ -45,11 +47,13 @@ def train(local_model, device, dataset, iters):
     :param iters:
     :return local_params: parameters from the trained model from the client
     :return train_loss: training loss for the current epoch
+    :return local_accuracy: local accuracy after training
     """
 
     # Optimizer for training the local models
     local_model.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
+    #optimizer = torch.optim.Adam(local_model.parameters(), lr=0.001, weight_decay=0.01 if apply_l2 else 0.0)
     optimizer = torch.optim.Adam(local_model.parameters(), lr=0.001)
     train_loss = 0.0
     local_model.train()
@@ -63,8 +67,17 @@ def train(local_model, device, dataset, iters):
             optimizer.zero_grad()
             # Get output prediction from the Client model.
             output = local_model(data)
-            # Computer loss
+            # Compute loss
             loss = criterion(output, target)
+
+            # manual L2
+            if apply_l2:
+                l2_reg = 0.0
+                for name, param in local_model.named_parameters():
+                    if 'weight' in name:
+                        l2_reg += torch.norm(param, 2)
+                loss += lambda_l2 * l2_reg
+
             batch_loss += loss.item() * data.size(0)
             # Collect new set of gradients
             loss.backward()
@@ -72,38 +85,44 @@ def train(local_model, device, dataset, iters):
             optimizer.step()
         # add loss for each iteration
         train_loss += batch_loss / len(dataset)
-    return local_model.state_dict(), train_loss / iters
 
-def test(model, dataloader):
+    local_loss, local_accuracy = test(local_model, dataset)
+
+    return local_model.state_dict(), train_loss / iters, local_accuracy
+
+
+def test(model, dataset):
     """
     Tests the FL global model for the given dataset
     :param model: Trained CNN model for testing
-    :param dataloader: data iterator used to test the model
-    :return test_loss: test loss for the current dataset:
-    :return preds: predictions for the current dataset
+    :param dataset: Dataset used to test the model
+    :return test_loss: test loss for the current dataset
     :return accuracy: accuracy for the prediction values from the model
     """
     criterion = torch.nn.CrossEntropyLoss()
     test_loss = 0.0
     correct = 0
+    total = 0  # Total number of samples
     model.eval()
     with torch.no_grad():
-        for batch_idx, (data, target) in tqdm(enumerate(dataloader), total=len(dataloader.dataset)/BATCH_SIZE):
+        for data, target in tqdm(dataset):
             data, target = data.to(DEVICE), target.to(DEVICE)
             output = model(data)
             loss = criterion(output, target)
             test_loss += loss.item() * data.size(0)
             preds = output.argmax(dim=1, keepdim=True)
             correct += preds.eq(target.view_as(preds)).sum().item()
-    accuracy = correct / len(dataloader.dataset)
-    return test_loss / len(dataloader.dataset), accuracy
+            total += target.size(0)  # Increment the total number of samples
+    accuracy = correct / total  # Use total number of samples for accuracy calculation
+    return test_loss / total, accuracy
+
 
 def check_data_distribution(dataloader, name):
     label_counts = np.zeros(10)
     for _, labels in dataloader:
         for label in labels:
             label_counts[label] += 1
-    print(f"Data distribution in {name}: {label_counts}")
+    #print(f"Data distribution in {name}: {label_counts}")
 
 
 # Function to distribute data for different experiment settings
@@ -211,7 +230,8 @@ if __name__ == "__main__":
 
     # Initialize a logger to log epoch results
     #logname = (f"results/log_federated_{DATASET}_{str(NUM_EPOCHS)}_{str(NUM_CLIENTS)}_{str(LOCAL_ITERS)}")
-    logname = (f"results/log_federated_{exp_num}_{str(NUM_EPOCHS)}_{str(NUM_CLIENTS)}_{str(LOCAL_ITERS)}")
+    logname = (f"results/log_federated_{exp_num}_{str(NUM_EPOCHS)}_{str(NUM_CLIENTS)}_{str(LOCAL_ITERS)}_{str(apply_l2)}.log")
+    print(f"logname: {logname}")
     logging.basicConfig(filename=logname, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger()
 
@@ -244,12 +264,16 @@ if __name__ == "__main__":
         train_distributed_dataset[batch_idx % NUM_CLIENTS].append((data, target))"""
 
     #model_path = f"models/{DATASET}_{str(NUM_CLIENTS)}_federated.sav"
-    model_path = f"models/{exp_num}_{str(NUM_CLIENTS)}_federated.sav"
+    model_path = f"models/{exp_num}_{str(NUM_CLIENTS)}_{str(apply_l2)}_federated.sav"
 
     all_train_loss = list()
     all_val_loss = list()
     all_val_acc = list()
     epoch_times = list()
+
+    all_local_acc = list()
+    start_time = time.time()
+    total_data_transferred = 0
 
     # Ensure that there is no need to train a model that has been previously trained under the same settings.
     if os.path.exists(model_path):
@@ -265,20 +289,29 @@ if __name__ == "__main__":
         global_model.train()
         val_loss_min = np.Inf
 
+
         # Train the model for the given number of epochs
         for epoch in range(1, NUM_EPOCHS+1):
             print(f"Epoch {str(epoch)}")
             local_params, local_losses = [], []
+            local_accuracies = []
+            epoch_start_time = time.time()
 
-            start_time = time.time()
             # Send a copy of global model to each client
             for idx in range(NUM_CLIENTS):
                 # Perform training on client side and get the parameters
-                param, loss = train(copy.deepcopy(global_model), DEVICE, train_distributed_dataset[idx], LOCAL_ITERS)
+                param, loss, local_accuracy = train(copy.deepcopy(global_model), DEVICE, train_distributed_dataset[idx], LOCAL_ITERS)
                 local_params.append(copy.deepcopy(param))
                 local_losses.append(copy.deepcopy(loss))
-            epoch_time = time.time() - start_time
+                local_accuracies.append(local_accuracy)
+                logger.info(f'Client {idx + 1}, Local Training Accuracy: {local_accuracy:.8f}')
+                print(f"local accuracy: {local_accuracy}")
+                total_data_transferred += sum([param[key].element_size() * param[key].nelement() for key in param])
+            epoch_time = time.time() - epoch_start_time
             epoch_times.append(epoch_time)
+            print(f'Epoch {epoch} time: {epoch_time:.2f} seconds')
+            logger.info(f'Epoch {epoch} time: {epoch_time:.2f} seconds')
+            all_local_acc.append(sum(local_accuracies) / len(local_accuracies))
 
             # Federated Average for the parameters from each client
             global_params = FedAvg(local_params)
@@ -288,7 +321,6 @@ if __name__ == "__main__":
             all_train_loss.append(train_loss)
 
             # Test the global model on the gray3 to ensure it tries to avoid the bias.
-            #val_loss, val_acc = test(global_model, validation_data)
             val_loss, val_acc = test(global_model, validation_gray3)
             all_val_loss.append(val_loss)
             all_val_acc.append(val_acc)
@@ -303,14 +335,9 @@ if __name__ == "__main__":
                 torch.save(global_model.state_dict(), model_path)
 
         print("Testing with IID (Bias-Aligned) setting:")
-        #test_loss, test_acc = test(global_model, test_data)
         test_loss, test_acc = test(global_model, test_color)
         print(f"IID Test accuracy: {test_acc:.8f}")
         logger.info(f'IID Test Loss: {test_loss:.8f}, IID Test Accuracy: {test_acc:.8f}')
-
-    """
-    You must test on the three different datasets, dont you think? youre only testing on two, what if you trained the model with already one of these?
-    """
 
     # Testing with Bias-Neutral (Grayscale) setting
     _, _, test_data_gray = load_dataset(val_split=0.2, batch_size=BATCH_SIZE, dataset="grayscale_mnist_3_channels")
@@ -326,10 +353,24 @@ if __name__ == "__main__":
     print(f"Bias-Conflicting Test Loss: {test_loss}, Bias-Conflicting Test Accuracy: {test_acc}")
     logger.info(f'Bias-Conflicting Test Loss: {test_loss:.8f}, Bias-Conflicting Test Accuracy: {test_acc:.8f}')
 
+    total_training_time = time.time() - start_time
+    avg_cpu_usage = np.mean([psutil.cpu_percent(interval=1) for _ in range(10)])
+    avg_memory_usage = np.mean([psutil.virtual_memory().percent for _ in range(10)])
+
+    logger.info(f'Total training time: {total_training_time:.2f} seconds')
+    logger.info(f'Total data transferred: {total_data_transferred / (1024 ** 2):.2f} MB')
+    logger.info(f'Average CPU usage: {avg_cpu_usage:.2f}%')
+    logger.info(f'Average memory usage: {avg_memory_usage:.2f}%')
     results = {
         "train_loss": all_train_loss,
         "val_loss": all_val_loss,
         "val_acc": all_val_acc,
-        "epoch_times": epoch_times
+        "local_acc": all_local_acc,
+        "epoch_times": epoch_times,
+        "total_training_time": total_training_time,
+        "total_data_transferred": total_data_transferred,
+        "avg_cpu_usage": avg_cpu_usage,
+        "avg_memory_usage": avg_memory_usage
     }
+    print(f"results: {results}")
     np.save(f"results/results_{exp_num}_{NUM_CLIENTS}.npy", results)
