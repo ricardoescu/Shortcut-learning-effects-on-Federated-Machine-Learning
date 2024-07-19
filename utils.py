@@ -185,6 +185,49 @@ def visualize_dataset(dataloaders, titles=["Train Set", "Validation Set", "Test 
 
     plt.show()
 
+
+
+def check_data_distribution(dataloader, name):
+    label_counts = np.zeros(10)
+    for _, labels in dataloader:
+        for label in labels:
+            label_counts[label] += 1
+    #print(f"Data distribution in {name}: {label_counts}")
+
+
+
+
+def visualize_client_data(distributed_data):
+    """
+    Visualizes one example from each client's dataset.
+    :param distributed_data: List of datasets distributed to each client.
+    """
+    num_clients = len(distributed_data)
+    fig, axes = plt.subplots(1, num_clients, figsize=(15, 5))
+
+    for i, client_data in enumerate(distributed_data):
+        if len(client_data) > 0:
+            # Get one sample
+            data, target = client_data[0]
+
+            # Remove batch dimension
+            if len(data.shape) == 4:  # If there is a batch dimension
+                data = data[0]
+                target = target[0]
+
+            # Handle grayscale and color images
+            if data.shape[0] == 3:  # If the data is color (3 channels)
+                data = data.permute(1, 2, 0)  # Change dimensions for plotting
+                axes[i].imshow(data)
+            else:  # Grayscale
+                axes[i].imshow(data.squeeze(), cmap='gray')
+
+            axes[i].set_title(f'Client {i + 1}, Label: {target.item()}')
+            axes[i].axis('off')
+
+    plt.show()
+
+
 if __name__ == "__main__":
     train, validation, test = load_dataset(dataset="mnist")
     visualize_dataset([train, validation, test],
