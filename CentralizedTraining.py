@@ -12,14 +12,14 @@ import time
 
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 VIS_DATA = False
 BATCH_SIZE = 10
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Device:', DEVICE)
 DATASET = "grayscale_mnist_3_channels"
-exp_num = 2
-apply_l2 = False
+exp_num = 5
+apply_l2 = True
 
 
 def train(model, device, dataset, criterion, optimizer, apply_l2=False, lambda_l2=0.01):
@@ -197,9 +197,9 @@ if __name__ == "__main__":
     train_data = combine_datasets(train_color, train_gray3, exp_num)
 
 
-    #validation_data = val_gray3
+    validation_data = val_gray3
     # let's try to change the validation data to bias conflicting, so that the loss function will use it
-    validation_data = val_bias_conflict
+    #validation_data = val_bias_conflict
     test_data = test_color # this one kinda not necessary because here I divided the bias aligned to be a different test (should do the same for federated...)
 
 
