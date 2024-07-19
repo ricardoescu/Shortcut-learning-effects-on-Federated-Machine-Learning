@@ -1,0 +1,30 @@
+INFO:root:Epoch: 1/10, Train Loss: 1.96399681, Val Loss: 0.09856531, Val Accuracy: 0.96983333
+INFO:root:Epoch 1 training time: 70.63 seconds
+INFO:root:Saving Model State
+INFO:root:Epoch: 2/10, Train Loss: 0.62902128, Val Loss: 0.06616880, Val Accuracy: 0.98150000
+INFO:root:Epoch 2 training time: 75.97 seconds
+INFO:root:Saving Model State
+INFO:root:Epoch: 3/10, Train Loss: 0.39829169, Val Loss: 0.06619828, Val Accuracy: 0.98100000
+INFO:root:Epoch 3 training time: 82.30 seconds
+INFO:root:Epoch: 4/10, Train Loss: 0.31623368, Val Loss: 0.05453178, Val Accuracy: 0.98491667
+INFO:root:Epoch 4 training time: 75.01 seconds
+INFO:root:Saving Model State
+INFO:root:Epoch: 5/10, Train Loss: 0.24836026, Val Loss: 0.05958663, Val Accuracy: 0.98500000
+INFO:root:Epoch 5 training time: 74.57 seconds
+INFO:root:Epoch: 6/10, Train Loss: 0.21643127, Val Loss: 0.05750857, Val Accuracy: 0.98616667
+INFO:root:Epoch 6 training time: 74.33 seconds
+INFO:root:Epoch: 7/10, Train Loss: 0.18306009, Val Loss: 0.05819234, Val Accuracy: 0.98558333
+INFO:root:Epoch 7 training time: 74.24 seconds
+INFO:root:Epoch: 8/10, Train Loss: 0.16524507, Val Loss: 0.06189575, Val Accuracy: 0.98483333
+INFO:root:Epoch 8 training time: 74.84 seconds
+INFO:root:Epoch: 9/10, Train Loss: 0.14252553, Val Loss: 0.07303102, Val Accuracy: 0.98625000
+INFO:root:Epoch 9 training time: 75.43 seconds
+INFO:root:Epoch: 10/10, Train Loss: 0.13031803, Val Loss: 0.06601576, Val Accuracy: 0.98708333
+INFO:root:Epoch 10 training time: 74.23 seconds
+INFO:root:Total training time: 751.62 seconds
+INFO:root:Total data transferred: 16.11 MB
+INFO:root:Average CPU usage: 1.30%
+INFO:root:Average memory usage: 89.90%
+INFO:root:Bias-Aligned Test accuracy 0.99970000
+INFO:root:Bias-Neutral Test accuracy 0.98990000
+INFO:root:Bias-Conflicting Test accuracy 0.08510000
