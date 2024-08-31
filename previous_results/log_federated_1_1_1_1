@@ -1,0 +1,4 @@
+2024-07-03 16:01:19,139 - INFO - Epoch: 1, Train Loss: 0.23952046, Val Loss: 19.48118285, Val Accuracy: 0.10941667
+2024-07-03 16:02:14,713 - INFO - IID Test Loss: 0.00003241, IID Test Accuracy: 1.00000000
+2024-07-03 16:02:50,493 - INFO - Bias-Neutral Test Loss: 19.56985488, Bias-Neutral Test Accuracy: 0.10280000
+2024-07-03 16:03:28,435 - INFO - Bias-Conflicting Test Loss: 47.44095005, Bias-Conflicting Test Accuracy: 0.00000000

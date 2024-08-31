@@ -1,0 +1,13 @@
+INFO:root:Epoch: 1/1, Train Loss: 0.63335856, Val Loss: 16.11058660, Val Accuracy: 0.09808333
+INFO:root:Saving Model State
+INFO:root:Bias-Aligned Test accuracy 1.00000000
+INFO:root:Bias-Neutral Test accuracy 0.09750000
+INFO:root:Bias-Conflicting Test accuracy 0.00000000
+INFO:root:Bias-Aligned Test accuracy 1.00000000
+INFO:root:Bias-Neutral Test accuracy 0.09750000
+INFO:root:Bias-Conflicting Test accuracy 0.00000000
+INFO:root:Epoch: 1/1, Train Loss: 0.55532417, Val Loss: 50.17014327, Val Accuracy: 0.00000000
+INFO:root:Saving Model State
+INFO:root:Bias-Aligned Test accuracy 1.00000000
+INFO:root:Bias-Neutral Test accuracy 0.15210000
+INFO:root:Bias-Conflicting Test accuracy 0.00000000

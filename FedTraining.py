@@ -5,6 +5,7 @@ import numpy as np
 import logging.config
 from tqdm import tqdm
 from CNN import CNN
+import random
 from utils import load_dataset, visualize_dataset, check_data_distribution, visualize_client_data
 import copy
 from torch.utils.data import random_split, Subset
@@ -15,18 +16,24 @@ from Fed_strategies import FedAvg
 from Fed_train_test import train, test, fedProx_train
 
 
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 LOCAL_ITERS = 1
 VIS_DATA = False
 BATCH_SIZE = 10
-NUM_CLIENTS = 4
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Device: {DEVICE}")
-exp_num = 2
+exp_num = 1
+if exp_num == 9:
+    NUM_CLIENTS = 3
+else:
+    NUM_CLIENTS = 4
 apply_l2 = False
 #algorithm = 'FedProx'
 algorithm = 'FedAvg'
-mu = 0.01
+sub_exp_num = 1
+#mu = 0.01
+#mu = 1
+opt = 'SGD'
 
 
 def setup_directories():
@@ -39,8 +46,14 @@ def setup_directories():
 def setup_logging(exp_num, NUM_EPOCHS, NUM_CLIENTS, LOCAL_ITERS, apply_l2):
     # Initialize a logger to log epoch results
     # logname = (f"results/log_federated_{DATASET}_{str(NUM_EPOCHS)}_{str(NUM_CLIENTS)}_{str(LOCAL_ITERS)}")
+
+    root_logger = logging.getLogger()
+
+    # Clear existing handlers
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
     logname = (
-        f"results/log_federated_Exp-{exp_num}_Epochs-{str(NUM_EPOCHS)}_Clients-{str(NUM_CLIENTS)}_L2-{str(apply_l2)}_strat-{algorithm}_localIters-{LOCAL_ITERS}.log")
+        f"results/log_federated_Exp-{exp_num}_Epochs-{str(NUM_EPOCHS)}_Clients-{str(NUM_CLIENTS)}_L2-{str(apply_l2)}_strat-{algorithm}_{sub_exp_num}_{opt}.log")
     print(f"logname: {logname}")
     logging.basicConfig(filename=logname, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger()
@@ -73,7 +86,7 @@ def check_all_data_distributions(train_color, validation_color, test_color, trai
 
 
 # Function to distribute data for different experiment settings
-def distribute_data(num_clients, color_data, gray_data, exp_num):
+def distribute_data(num_clients, cMNIST_A, gray_data, cMNIST_B, exp_num):
     """
     This function arranges the data in 5 different distributions depending on the experiment to perform.
     Experiment 1: Only client 1 has color mnist. Clients 2, 3, and 4 have gray mnist
@@ -82,25 +95,35 @@ def distribute_data(num_clients, color_data, gray_data, exp_num):
     Experiment 4: All clients have only color MNIST.
     Experiment 5: All clients have only grayscale MNIST.
     :param num_clients:
-    :param color_data:
+    :param cMNIST_A:
     :param gray_data: Gray3 (Grayscale MNIST adjusted to have 3 color channels so there are no problems with the CNN model)
     :param exp_num: Experiment number.
     :return:
     """
     distributed_data = [[] for _ in range(num_clients)]
 
-    # Splitting color and gray data into equal parts for clients
-    color_subsets = [[] for _ in range(num_clients)]
-    gray_subsets = [[] for _ in range(num_clients)]
 
-    for batch_idx, (data, target) in enumerate(color_data):
-        color_subsets[batch_idx % num_clients].append((data, target))
+    # Splitting color and gray data into equal parts for clients
+    color_subsets_A = [[] for _ in range(num_clients)]
+    gray_subsets = [[] for _ in range(num_clients)]
+    color_subsets_B = [[] for _ in range(num_clients)]
+
+
+    for batch_idx, (data, target) in enumerate(cMNIST_A):
+        color_subsets_A[batch_idx % num_clients].append((data, target))
     for batch_idx, (data, target) in enumerate(gray_data):
         gray_subsets[batch_idx % num_clients].append((data, target))
+    for batch_idx, (data, target) in enumerate(cMNIST_B):
+        color_subsets_B[batch_idx % num_clients].append((data, target))
+
+    # shuffle the datasets so that i can get an average??
+    random.shuffle(color_subsets_A)
+    random.shuffle(gray_subsets)
+    random.shuffle(color_subsets_B)
 
     if exp_num == 1:
         # Client 1 gets 1/num_clients of color data, others get gray data
-        distributed_data[0] = color_subsets[0]
+        distributed_data[0] = color_subsets_A[0]
         for i in range(1, num_clients):
             distributed_data[i] = gray_subsets[i]
     elif exp_num == 2:
@@ -108,20 +131,43 @@ def distribute_data(num_clients, color_data, gray_data, exp_num):
         for i in range(num_clients // 2):
             distributed_data[i] = gray_subsets[i]
         for i in range(num_clients // 2, num_clients):
-            distributed_data[i] = color_subsets[i - num_clients // 2]
+            distributed_data[i] = color_subsets_A[i - num_clients // 2]
     elif exp_num == 3:
         # All but the last client get color data, the last client gets gray data
         for i in range(num_clients - 1):
-            distributed_data[i] = color_subsets[i]
+            distributed_data[i] = color_subsets_A[i]
         distributed_data[num_clients - 1] = gray_subsets[num_clients - 1]
     elif exp_num == 4:
         # All clients get color data
         for i in range(num_clients):
-            distributed_data[i] = color_subsets[i]
+            distributed_data[i] = color_subsets_A[i]
     elif exp_num == 5:
         # All clients get gray data
         for i in range(num_clients):
             distributed_data[i] = gray_subsets[i]
+    elif exp_num == 6:
+        # Client 1 gets Color MNIST A, Client 2 gets Color MNIST B, Clients 3 and 4 get gray MNIST
+        distributed_data[0] = color_subsets_A[0]
+        distributed_data[1] = color_subsets_B[0]
+        for i in range(2, num_clients):
+            distributed_data[i] = gray_subsets[i]
+    elif exp_num == 7:
+        # Client 1 gets grayscale mnist, Client 2 gets Color MNIST B, Clients 3 and 4 get color MNIST A
+        distributed_data[0] = gray_subsets[0]
+        distributed_data[1] = color_subsets_B[0]
+        for i in range(2, num_clients):
+            distributed_data[i] = color_subsets_A[i]
+    elif exp_num == 8:
+        # First half clients get CMNISTA data, second half get CMNISTB data
+        for i in range(num_clients // 2):
+            distributed_data[i] = color_subsets_A[i]
+        for i in range(num_clients // 2, num_clients):
+            distributed_data[i] = color_subsets_B[i - num_clients // 2]
+    elif exp_num == 9:
+        # 1 client gets CMNISTA data, second client gets CMNISTB data, third gets grayscale MNIST
+        distributed_data[0] = color_subsets_A[0]
+        distributed_data[1] = color_subsets_B[1]
+        distributed_data[2] = gray_subsets[2]
 
     for i, subset in enumerate(distributed_data):
         print(f"Client {i + 1} dataset size: {len(subset)}")
@@ -149,7 +195,7 @@ def initialize_global_model(model_path):
     return global_model
 
 
-def train_global_model(global_model, training_set, validation_set, test_set, NUM_EPOCHS, LOCAL_ITERS, NUM_CLIENTS, DEVICE, apply_l2, model_path, logger, algorithm='FedAvg', mu=0.01):
+def train_global_model(global_model, training_set, validation_set, test_set, test_CA, test_CB, NUM_EPOCHS, LOCAL_ITERS, NUM_CLIENTS, DEVICE, apply_l2, model_path, logger, algorithm='FedAvg', mu=0.01):
     global_params = global_model.state_dict()
     val_loss_min = np.Inf
     all_train_loss, all_val_loss, all_val_acc, epoch_times, all_local_acc = [], [], [], [], []
@@ -194,13 +240,16 @@ def train_global_model(global_model, training_set, validation_set, test_set, NUM
 
         # Test the global model on the gray3 to ensure it tries to avoid the bias.
         val_loss, val_acc = test(global_model, test_set)
+        # let's see how does the accuracy for bias-aligned evolves, also for bias-conflicting
+        _, CMNISTA_acc= test(global_model, test_CA)
+        _, CMNISTB_acc = test(global_model, test_CB)
         all_val_loss.append(val_loss)
         all_val_acc.append(val_acc)
 
         print(
-            f"Epoch {epoch}, Training Loss: {train_loss}, Validation Loss: {val_loss}, Validation Accuracy: {val_acc}")
+            f"Epoch {epoch}, Training Loss: {train_loss}, Validation Loss: {val_loss}, Validation Accuracy: {val_acc}, Bias aligned accuracy: {CMNISTA_acc}, Bias conflicting accuracy: {CMNISTB_acc}")
         logger.info(
-            f'Epoch: {epoch}, Train Loss: {train_loss:.8f}, Val Loss: {val_loss:.8f}, Val Accuracy: {val_acc:.8f}')
+            f'Epoch: {epoch}, Train Loss: {train_loss:.8f}, Val Loss: {val_loss:.8f}, Val Accuracy: {val_acc:.8f}, Bias aligned accuracy: {CMNISTA_acc:.4f}, Bias conflicting accuracy: {CMNISTB_acc:.4f}')
 
         # If validation loss decreases, save the model
         if val_loss < val_loss_min:
@@ -211,7 +260,7 @@ def train_global_model(global_model, training_set, validation_set, test_set, NUM
     return global_model, all_train_loss, all_val_loss, all_val_acc, epoch_times, all_local_acc, total_data_transferred
 
 
-def evaluate_model(global_model, test_color, test_gray, bias_conflicting_test, logger):
+def evaluate_model(global_model, test_color, test_gray, bias_conflicting_test, mnistC, logger):
     test_loss, test_acc = test(global_model, test_color)
     print(f"IID Test accuracy: {test_acc:.8f}")
     logger.info(f'IID Test Loss: {test_loss:.8f}, IID Test Accuracy: {test_acc:.8f}')
@@ -223,6 +272,10 @@ def evaluate_model(global_model, test_color, test_gray, bias_conflicting_test, l
     test_loss, test_acc = test(global_model, bias_conflicting_test)
     print(f"Bias-Conflicting Test Loss: {test_loss}, Bias-Conflicting Test Accuracy: {test_acc}")
     logger.info(f'Bias-Conflicting Test Loss: {test_loss:.8f}, Bias-Conflicting Test Accuracy: {test_acc:.8f}')
+
+    test_loss, test_acc = test(global_model, mnistC)
+    print(f"C MNIST_C Test Loss: {test_loss}, C MNIST_C Test accuracy: {test_acc}")
+    logger.info(f'C MNIST_C Test Loss: {test_loss:.8f}, C MNIST_C Test Accuracy: {test_acc:.8f}')
 
 def log_and_save_results(start_time, total_data_transferred, all_train_loss, all_val_loss, all_val_acc, all_local_acc, epoch_times, exp_num, NUM_CLIENTS, logger):
     total_training_time = time.time() - start_time
@@ -247,37 +300,50 @@ def log_and_save_results(start_time, total_data_transferred, all_train_loss, all
     np.save(f"results/results_{exp_num}_{NUM_CLIENTS}.npy", results)
 
 if __name__ == "__main__":
-    setup_directories()
-    logger = setup_logging(exp_num, NUM_EPOCHS, NUM_CLIENTS, LOCAL_ITERS, apply_l2)
-    start_time = time.time()
+    for i in range(1, 9):
+        exp_num = i
+        if exp_num == 9:
+            NUM_CLIENTS = 3
+        else:
+            NUM_CLIENTS = 4
+        for j in range(1, 3):
+            sub_exp_num = j
+            setup_directories()
+            logger = setup_logging(exp_num, NUM_EPOCHS, NUM_CLIENTS, LOCAL_ITERS, apply_l2)
+            start_time = time.time()
 
-    train_color, validation_color, test_color, train_gray3, validation_gray3, test_gray3 = load_and_visualize_data(
-        VIS_DATA, BATCH_SIZE)
-    check_all_data_distributions(train_color, validation_color, test_color, train_gray3, validation_gray3, test_gray3)
+            train_color, validation_color, test_color, train_gray3, validation_gray3, test_gray3 = load_and_visualize_data(
+                VIS_DATA, BATCH_SIZE)
+            check_all_data_distributions(train_color, validation_color, test_color, train_gray3, validation_gray3, test_gray3)
 
-    # Distribute the training data divided by color across clients
-    #train_distributed_dataset = [[] for _ in range(NUM_CLIENTS)]
-    train_distributed_dataset = distribute_data(NUM_CLIENTS, train_color, train_gray3, exp_num)
+            train_MNIST_B, val_MNIST_B, test_MNIST_B = load_dataset(val_split=0.2, batch_size=BATCH_SIZE,
+                                                                    dataset="color_MNIST_B")
 
-    validation_gray3_splits = split_dataset(validation_gray3, NUM_CLIENTS)
+            train_MNIST_C, val_MNIST_C, test_MNIST_C = load_dataset(val_split=0.2, batch_size=BATCH_SIZE,
+                                                                    dataset="color_MNIST_C")
 
-    # Visualize one example from each client's dataset to ensure correct distribution.
-    visualize_client_data(train_distributed_dataset)
+            # Distribute the training data divided by color across clients
+            #train_distributed_dataset = [[] for _ in range(NUM_CLIENTS)]
+            train_distributed_dataset = distribute_data(NUM_CLIENTS, train_color, train_gray3, train_MNIST_B, exp_num)
 
-    model_path = f"models/exp_num-{exp_num}_clients-{str(NUM_CLIENTS)}_L2-{str(apply_l2)}_strat-{algorithm}_federated.sav"
+            validation_gray3_splits = split_dataset(validation_gray3, NUM_CLIENTS)
 
-    # Ensure that there is no need to train a model that has been previously trained under the same settings.
-    global_model = initialize_global_model(model_path)
+            # Visualize one example from each client's dataset to ensure correct distribution.
+            visualize_client_data(train_distributed_dataset)
 
-    if global_model.training:
-        global_model, all_train_loss, all_val_loss, all_val_acc, epoch_times, all_local_acc, total_data_transferred = train_global_model(
-            global_model, train_distributed_dataset, validation_gray3_splits, test_gray3, NUM_EPOCHS, LOCAL_ITERS, NUM_CLIENTS, DEVICE,
-            apply_l2, model_path, logger
-        )
+            model_path = f"models/exp_num-{exp_num}_clients-{str(NUM_CLIENTS)}_L2-{str(apply_l2)}_strat-{algorithm}_{opt}_{sub_exp_num}_federated.sav"
 
-        _, _, bias_conflicting_test = load_dataset(val_split=0.2, batch_size=BATCH_SIZE, dataset="bias_conflicting_mnist")
+            # Ensure that there is no need to train a model that has been previously trained under the same settings.
+            global_model = initialize_global_model(model_path)
 
-    evaluate_model(global_model, test_color, test_gray3, bias_conflicting_test, logger)
-    log_and_save_results(start_time, total_data_transferred, all_train_loss, all_val_loss, all_val_acc, all_local_acc, epoch_times, exp_num, NUM_CLIENTS, logger)
+            if global_model.training:
+                global_model, all_train_loss, all_val_loss, all_val_acc, epoch_times, all_local_acc, total_data_transferred = train_global_model(
+                    global_model, train_distributed_dataset, validation_gray3_splits, test_gray3, test_color, test_MNIST_B, NUM_EPOCHS, LOCAL_ITERS, NUM_CLIENTS, DEVICE,
+                    apply_l2, model_path, logger
+                )
+
+
+            evaluate_model(global_model, test_color, test_gray3, test_MNIST_B, test_MNIST_C, logger)
+            log_and_save_results(start_time, total_data_transferred, all_train_loss, all_val_loss, all_val_acc, all_local_acc, epoch_times, exp_num, NUM_CLIENTS, logger)
 
 

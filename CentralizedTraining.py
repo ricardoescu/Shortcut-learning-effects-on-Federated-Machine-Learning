@@ -9,6 +9,7 @@ from utils import load_dataset, visualize_dataset
 from torch.utils.data import DataLoader, ConcatDataset, Subset
 import psutil
 import time
+import random
 
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
@@ -18,8 +19,14 @@ BATCH_SIZE = 10
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Device:', DEVICE)
 DATASET = "grayscale_mnist_3_channels"
-exp_num = 5
-apply_l2 = True
+exp_num = 1
+if exp_num == 9:
+    NUM_CLIENTS = 3
+else:
+    NUM_CLIENTS = 4
+apply_l2 = False
+sub_exp_num = 1
+opt = 'SGD'
 
 
 def train(model, device, dataset, criterion, optimizer, apply_l2=False, lambda_l2=0.01):
@@ -61,29 +68,52 @@ def test(model, dataloader, criterion):
 
     return test_loss / len(dataloader.dataset), preds, accuracy
 
-def combine_datasets(color_data, gray_data, exp_num):
-    num_color = len(color_data) // 5
-    num_gray = len(gray_data) // 5
-    color_subsets = [[] for _ in range(5)]
-    gray_subsets = [[] for _ in range(5)]
+def combine_datasets(cMNIST_A, gray_data, cMNIST_B, exp_num):
+    num_color = len(cMNIST_A) // NUM_CLIENTS
+    num_gray = len(gray_data) // NUM_CLIENTS
+    cMNIST_A_Subsets = [[] for _ in range(NUM_CLIENTS)]
+    gray_subsets = [[] for _ in range(NUM_CLIENTS)]
+    cMNIST_B_Subsets = [[] for _ in range(NUM_CLIENTS)]
 
-    for batch_idx, (data, target) in enumerate(color_data):
-        color_subsets[batch_idx % 5].append((data, target))
+
+
+    for batch_idx, (data, target) in enumerate(cMNIST_A):
+        cMNIST_A_Subsets[batch_idx % NUM_CLIENTS].append((data, target))
     for batch_idx, (data, target) in enumerate(gray_data):
-        gray_subsets[batch_idx % 5].append((data, target))
+        gray_subsets[batch_idx % NUM_CLIENTS].append((data, target))
+    for batch_idx, (data, target) in enumerate(cMNIST_B):
+        cMNIST_B_Subsets[batch_idx % NUM_CLIENTS].append((data, target))
+
+    random.shuffle(cMNIST_A_Subsets)
+    random.shuffle(gray_subsets)
+    random.shuffle(cMNIST_B_Subsets)
 
     combined_data = []
     match exp_num:
         case 1:
-            combined_data = color_subsets[0] + [item for subset in gray_subsets[1:] for item in subset]
+            combined_data = cMNIST_A_Subsets[0] + [item for subset in gray_subsets[1:] for item in subset]
         case 2:
-            combined_data = [item for subset in color_subsets[:2] for item in subset] + [item for subset in gray_subsets[2:] for item in subset]
+            combined_data = [item for subset in cMNIST_A_Subsets[:2] for item in subset] + [item for subset in gray_subsets[2:] for item in subset]
         case 3:
-            combined_data = [item for subset in color_subsets[:3] for item in subset] + gray_subsets[3]
+            combined_data = [item for subset in cMNIST_A_Subsets[:3] for item in subset] + gray_subsets[3]
         case 4:
-            combined_data = [item for subset in color_subsets for item in subset]
+            combined_data = [item for subset in cMNIST_A_Subsets for item in subset]
         case 5:
             combined_data = [item for subset in gray_subsets for item in subset]
+        case 6:
+            # 25% 1 get Color MNIST A, 25% get Color MNIST B, 50% get gray MNIST
+            combined_data = cMNIST_A_Subsets[0] + cMNIST_B_Subsets[1] + [item for subset in gray_subsets[2:] for item in subset]
+        case 7:
+            # Client 1 gets grayscale mnist, Client 2 gets Color MNIST B, Clients 3 and 4 get color MNIST A
+            combined_data = ([item for subset in cMNIST_A_Subsets[:2] for item in subset] + cMNIST_B_Subsets[1] +
+                             gray_subsets[2])
+        case 8:
+            # First half get CMNISTA data, second half get CMNISTB data
+            combined_data = ([item for subset in cMNIST_A_Subsets[:2] for item in subset] +
+                             [item for subset in cMNIST_B_Subsets[2:] for item in subset])
+        case 9:
+            combined_data = cMNIST_A_Subsets[0] + cMNIST_B_Subsets[1] + gray_subsets[2]
+
 
     return combined_data
 def setup_directories():
@@ -93,7 +123,7 @@ def setup_directories():
         os.mkdir('results')
 
 def setup_logging(exp_num, NUM_EPOCHS, apply_l2):
-    logname = f'results/log_centralized_exp{exp_num}_{NUM_EPOCHS}_{str(apply_l2)}.log'
+    logname = f'results/log_centralized_exp{exp_num}_{NUM_EPOCHS}_{str(apply_l2)}_{sub_exp_num}_{opt}.log'
     print(f"logname: {logname}")
     logging.basicConfig(filename=logname, level=logging.DEBUG)
     logger = logging.getLogger()
@@ -102,7 +132,7 @@ def setup_logging(exp_num, NUM_EPOCHS, apply_l2):
 def load_data(VIS_DATA, BATCH_SIZE):
     train_color, val_color, test_color = load_dataset(val_split=0.2, batch_size=BATCH_SIZE, dataset="color_mnist")
     train_gray3, val_gray3, test_gray3 = load_dataset(val_split=0.2, batch_size=BATCH_SIZE, dataset="grayscale_mnist_3_channels")
-    train_bias_conflict, val_bias_conflict, test_bias_conflict = load_dataset(val_split=0.2, batch_size=BATCH_SIZE, dataset="bias_conflicting_mnist")
+    train_bias_conflict, val_bias_conflict, test_bias_conflict = load_dataset(val_split=0.2, batch_size=BATCH_SIZE, dataset="color_MNIST_B")
 
     if VIS_DATA:
         visualize_dataset([train_color, val_color, test_color])
@@ -121,7 +151,7 @@ def initialize_model(model_path):
     return model
 
 
-def train_loop(model, train_data, validation_data, criterion, optimizer, model_path, logger):
+def train_loop(model, train_data, validation_data, val_MNIST_A, val_MNIST_B, criterion, optimizer, model_path, logger):
     all_train_loss = []
     all_val_loss = []
     val_loss_min = np.Inf
@@ -134,12 +164,14 @@ def train_loop(model, train_data, validation_data, criterion, optimizer, model_p
 
         train_loss = train(model, DEVICE, train_data, criterion, optimizer, apply_l2=apply_l2, lambda_l2=0.01)
         val_loss, _, accuracy = test(model, validation_data, criterion)
+        _, _, acc_cMNIST_A = test(model, val_MNIST_A, criterion)
+        _, _, acc_cMNIST_B = test(model, val_MNIST_B, criterion)
         all_train_loss.append(train_loss)
         all_val_loss.append(val_loss)
         print(
-            f"Epoch {epoch}, Training Loss: {train_loss}, Validation Loss: {val_loss}, Validation Accuracy: {accuracy}")
+            f"Epoch {epoch}, Training Loss: {train_loss}, Validation Loss: {val_loss}, Validation Accuracy: {accuracy}, Bias aligned accuracy: {acc_cMNIST_A}, Bias conflicting accuracy: {acc_cMNIST_B}")
         logger.info(
-            f'Epoch: {epoch}/{NUM_EPOCHS}, Train Loss: {train_loss:.8f}, Val Loss: {val_loss:.8f}, Val Accuracy: {accuracy:.8f}')
+            f'Epoch: {epoch}/{NUM_EPOCHS}, Train Loss: {train_loss:.8f}, Val Loss: {val_loss:.8f}, Val Accuracy: {accuracy:.8f}, Bias aligned accuracy: {acc_cMNIST_A}, Bias conflicting accuracy: {acc_cMNIST_B}')
 
         epoch_time = time.time() - epoch_start_time
         logger.info(f'Epoch {epoch} training time: {epoch_time:.2f} seconds')
@@ -174,6 +206,11 @@ def evaluate_model(model, criterion, logger):
     logger.info('Bias-Conflicting Test accuracy {:.8f}'.format(accuracy_bias_conflicting))
     print(f"Bias-Conflicting Test Accuracy: {accuracy_bias_conflicting:.8f}")
 
+    train_MNIST_C, val_MNIST_C, test_MNIST_C = load_dataset(val_split=0.2, batch_size=BATCH_SIZE,
+                                                            dataset="color_MNIST_C")
+    _, _, accuracy_cMNIST_C = test(model, test_MNIST_C, criterion)
+    logger.info('cMNIST C Test accuracy {:.8f}'.format(accuracy_cMNIST_C))
+    print(f"cMNIST C Test Accuracy: {accuracy_cMNIST_C:.8f}")
 
 if __name__ == "__main__":
     setup_directories()
@@ -181,7 +218,8 @@ if __name__ == "__main__":
 
     train_color, val_color, test_color, train_gray3, val_gray3, test_gray3, train_bias_conflict, val_bias_conflict, test_bias_conflict = load_data(
         VIS_DATA, BATCH_SIZE)
-
+    train_MNIST_C, val_MNIST_C, test_MNIST_C = load_dataset(val_split=0.2, batch_size=BATCH_SIZE,
+                                                            dataset="color_MNIST_C")
 
 
 
@@ -194,7 +232,7 @@ if __name__ == "__main__":
         And the color mnist for the final testing?
     """
 
-    train_data = combine_datasets(train_color, train_gray3, exp_num)
+    train_data = combine_datasets(train_color, train_gray3, train_bias_conflict, exp_num)
 
 
     validation_data = val_gray3
@@ -203,14 +241,17 @@ if __name__ == "__main__":
     test_data = test_color # this one kinda not necessary because here I divided the bias aligned to be a different test (should do the same for federated...)
 
 
-    model_path = f"models/{exp_num}_{NUM_EPOCHS}_{str(apply_l2)}_centralized.sav"
+    model_path = f"models/{exp_num}_{NUM_EPOCHS}_{str(apply_l2)}_{opt}_{sub_exp_num}_centralized.sav"
 
     model = initialize_model(model_path)
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    if opt == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    else:
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 
     if model.training:
-        model = train_loop(model, train_data, validation_data, criterion, optimizer, model_path, logger)
+        model = train_loop(model, train_data, validation_data, val_color, val_bias_conflict, criterion, optimizer, model_path, logger)
 
     evaluate_model(model, criterion, logger)

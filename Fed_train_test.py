@@ -4,6 +4,7 @@ from tqdm import tqdm
 apply_l2 = True
 import os
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+opt = 'SGD'
 
 def train(local_model, device, dataset, test_dataset, iters, apply_l2=apply_l2, lambda_l2=0.01):
     """
@@ -20,7 +21,11 @@ def train(local_model, device, dataset, test_dataset, iters, apply_l2=apply_l2, 
     # Optimizer for training the local models
     local_model.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adam(local_model.parameters(), lr=0.001)
+    if opt == 'Adam':
+        optimizer = torch.optim.Adam(local_model.parameters(), lr=0.001)
+    else:
+        optimizer = torch.optim.SGD(local_model.parameters(), lr=0.001, momentum=0.9)
+    #optimizer = torch.optim.AdamW(local_model.parameters(), lr=0.001)
     train_loss = 0.0
     local_model.train()
 
