@@ -1,0 +1,68 @@
+2024-08-31 00:18:53,866 - INFO - Client 1, Local Training Accuracy: 0.87800000
+2024-08-31 00:19:04,022 - INFO - Client 2, Local Training Accuracy: 0.89433333
+2024-08-31 00:19:13,770 - INFO - Client 3, Local Training Accuracy: 0.87166667
+2024-08-31 00:19:23,914 - INFO - Client 4, Local Training Accuracy: 0.89266667
+2024-08-31 00:19:23,914 - INFO - Epoch 1 time: 40.79 seconds
+2024-08-31 00:19:35,992 - INFO - Epoch: 1, Train Loss: 12.09415847, Val Loss: 0.31055769, Val Accuracy: 0.90600000, Bias aligned accuracy: 0.7439, Bias conflicting accuracy: 0.8147
+2024-08-31 00:19:46,606 - INFO - Client 1, Local Training Accuracy: 0.93133333
+2024-08-31 00:19:56,766 - INFO - Client 2, Local Training Accuracy: 0.94133333
+2024-08-31 00:20:07,344 - INFO - Client 3, Local Training Accuracy: 0.92933333
+2024-08-31 00:20:17,412 - INFO - Client 4, Local Training Accuracy: 0.92733333
+2024-08-31 00:20:17,413 - INFO - Epoch 2 time: 41.37 seconds
+2024-08-31 00:20:29,589 - INFO - Epoch: 2, Train Loss: 5.13304027, Val Loss: 0.17016537, Val Accuracy: 0.94690000, Bias aligned accuracy: 0.8341, Bias conflicting accuracy: 0.9134
+2024-08-31 00:20:40,080 - INFO - Client 1, Local Training Accuracy: 0.94700000
+2024-08-31 00:20:50,457 - INFO - Client 2, Local Training Accuracy: 0.95500000
+2024-08-31 00:21:01,105 - INFO - Client 3, Local Training Accuracy: 0.94833333
+2024-08-31 00:21:11,554 - INFO - Client 4, Local Training Accuracy: 0.95766667
+2024-08-31 00:21:11,554 - INFO - Epoch 3 time: 41.96 seconds
+2024-08-31 00:21:24,318 - INFO - Epoch: 3, Train Loss: 4.02357637, Val Loss: 0.11739945, Val Accuracy: 0.96290000, Bias aligned accuracy: 0.8553, Bias conflicting accuracy: 0.9238
+2024-08-31 00:21:35,967 - INFO - Client 1, Local Training Accuracy: 0.95600000
+2024-08-31 00:21:46,861 - INFO - Client 2, Local Training Accuracy: 0.96500000
+2024-08-31 00:21:58,155 - INFO - Client 3, Local Training Accuracy: 0.95600000
+2024-08-31 00:22:09,176 - INFO - Client 4, Local Training Accuracy: 0.96533333
+2024-08-31 00:22:09,177 - INFO - Epoch 4 time: 44.85 seconds
+2024-08-31 00:22:22,699 - INFO - Epoch: 4, Train Loss: 3.50032125, Val Loss: 0.09336219, Val Accuracy: 0.97110000, Bias aligned accuracy: 0.8920, Bias conflicting accuracy: 0.9488
+2024-08-31 00:22:34,126 - INFO - Client 1, Local Training Accuracy: 0.95666667
+2024-08-31 00:22:45,431 - INFO - Client 2, Local Training Accuracy: 0.97200000
+2024-08-31 00:22:56,700 - INFO - Client 3, Local Training Accuracy: 0.96666667
+2024-08-31 00:23:07,620 - INFO - Client 4, Local Training Accuracy: 0.96766667
+2024-08-31 00:23:07,620 - INFO - Epoch 5 time: 44.92 seconds
+2024-08-31 00:23:20,605 - INFO - Epoch: 5, Train Loss: 3.23185482, Val Loss: 0.08054425, Val Accuracy: 0.97430000, Bias aligned accuracy: 0.9063, Bias conflicting accuracy: 0.9580
+2024-08-31 00:23:31,347 - INFO - Client 1, Local Training Accuracy: 0.96933333
+2024-08-31 00:23:41,612 - INFO - Client 2, Local Training Accuracy: 0.97266667
+2024-08-31 00:23:52,238 - INFO - Client 3, Local Training Accuracy: 0.96900000
+2024-08-31 00:24:02,750 - INFO - Client 4, Local Training Accuracy: 0.97066667
+2024-08-31 00:24:02,750 - INFO - Epoch 6 time: 42.14 seconds
+2024-08-31 00:24:15,598 - INFO - Epoch: 6, Train Loss: 3.09988267, Val Loss: 0.07155584, Val Accuracy: 0.97610000, Bias aligned accuracy: 0.9182, Bias conflicting accuracy: 0.9633
+2024-08-31 00:24:26,606 - INFO - Client 1, Local Training Accuracy: 0.97266667
+2024-08-31 00:24:37,496 - INFO - Client 2, Local Training Accuracy: 0.97566667
+2024-08-31 00:24:48,793 - INFO - Client 3, Local Training Accuracy: 0.97066667
+2024-08-31 00:24:59,814 - INFO - Client 4, Local Training Accuracy: 0.97333333
+2024-08-31 00:24:59,814 - INFO - Epoch 7 time: 44.21 seconds
+2024-08-31 00:27:07,572 - INFO - Epoch: 7, Train Loss: 2.97378728, Val Loss: 0.06458442, Val Accuracy: 0.97870000, Bias aligned accuracy: 0.9154, Bias conflicting accuracy: 0.9616
+2024-08-31 00:27:17,646 - INFO - Client 1, Local Training Accuracy: 0.97033333
+2024-08-31 00:27:27,499 - INFO - Client 2, Local Training Accuracy: 0.97700000
+2024-08-31 00:27:37,467 - INFO - Client 3, Local Training Accuracy: 0.97433333
+2024-08-31 00:27:47,276 - INFO - Client 4, Local Training Accuracy: 0.97400000
+2024-08-31 00:27:47,276 - INFO - Epoch 8 time: 39.70 seconds
+2024-08-31 00:27:59,371 - INFO - Epoch: 8, Train Loss: 2.87300935, Val Loss: 0.05839053, Val Accuracy: 0.98110000, Bias aligned accuracy: 0.9244, Bias conflicting accuracy: 0.9667
+2024-08-31 00:28:09,771 - INFO - Client 1, Local Training Accuracy: 0.97300000
+2024-08-31 00:28:19,809 - INFO - Client 2, Local Training Accuracy: 0.97766667
+2024-08-31 00:28:30,178 - INFO - Client 3, Local Training Accuracy: 0.97600000
+2024-08-31 00:28:40,329 - INFO - Client 4, Local Training Accuracy: 0.97600000
+2024-08-31 00:28:40,329 - INFO - Epoch 9 time: 40.89 seconds
+2024-08-31 00:28:52,589 - INFO - Epoch: 9, Train Loss: 2.79276795, Val Loss: 0.05599613, Val Accuracy: 0.98170000, Bias aligned accuracy: 0.9184, Bias conflicting accuracy: 0.9666
+2024-08-31 00:29:03,170 - INFO - Client 1, Local Training Accuracy: 0.97866667
+2024-08-31 00:29:13,611 - INFO - Client 2, Local Training Accuracy: 0.97900000
+2024-08-31 00:29:24,484 - INFO - Client 3, Local Training Accuracy: 0.97533333
+2024-08-31 00:29:35,050 - INFO - Client 4, Local Training Accuracy: 0.97433333
+2024-08-31 00:29:35,050 - INFO - Epoch 10 time: 42.46 seconds
+2024-08-31 00:29:47,959 - INFO - Epoch: 10, Train Loss: 2.71537680, Val Loss: 0.05242799, Val Accuracy: 0.98310000, Bias aligned accuracy: 0.9187, Bias conflicting accuracy: 0.9665
+2024-08-31 00:29:52,583 - INFO - IID Test Loss: 0.30273724, IID Test Accuracy: 0.91870000
+2024-08-31 00:29:56,559 - INFO - Bias-Neutral Test Loss: 0.05242799, Bias-Neutral Test Accuracy: 0.98310000
+2024-08-31 00:30:01,526 - INFO - Bias-Conflicting Test Loss: 0.20706871, Bias-Conflicting Test Accuracy: 0.96650000
+2024-08-31 00:30:09,474 - INFO - C MNIST_C Test Loss: 0.20797606, C MNIST_C Test Accuracy: 0.97080000
+2024-08-31 00:30:19,767 - INFO - Total training time: 839.67 seconds
+2024-08-31 00:30:19,767 - INFO - Total data transferred: 64.43 MB
+2024-08-31 00:30:19,767 - INFO - Average CPU usage: 0.43%
+2024-08-31 00:30:19,767 - INFO - Average memory usage: 95.70%

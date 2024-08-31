@@ -94,6 +94,10 @@ def distribute_data(num_clients, cMNIST_A, gray_data, cMNIST_B, exp_num):
     Experiment 3: Client 1, 2, 3 have color MNIST. Client 4 has only gray MNIST.
     Experiment 4: All clients have only color MNIST.
     Experiment 5: All clients have only grayscale MNIST.
+    Experiment 6: Client 1 gets cMNIST A, client 2 gets cMNIST B, clients 3 and 4 get gray MNIST.
+    Experiment 7: Client 1 gets grayscale MNIST, client gets cMNIST B, clients 3 and 4 get cMNIST A
+    Experiment 8: Clients 1 and 2 get CMNIST A, clients 3 and 4 get cMNIST B
+    Experiment 9: Client 1 gets cMNIST A, client 2 gets cMNIST B, client 3 gets MNIST.
     :param num_clients:
     :param cMNIST_A:
     :param gray_data: Gray3 (Grayscale MNIST adjusted to have 3 color channels so there are no problems with the CNN model)
@@ -300,13 +304,13 @@ def log_and_save_results(start_time, total_data_transferred, all_train_loss, all
     np.save(f"results/results_{exp_num}_{NUM_CLIENTS}.npy", results)
 
 if __name__ == "__main__":
-    for i in range(1, 9):
+    for i in range(1, 10):
         exp_num = i
         if exp_num == 9:
             NUM_CLIENTS = 3
         else:
             NUM_CLIENTS = 4
-        for j in range(1, 3):
+        for j in range(1, 4):
             sub_exp_num = j
             setup_directories()
             logger = setup_logging(exp_num, NUM_EPOCHS, NUM_CLIENTS, LOCAL_ITERS, apply_l2)

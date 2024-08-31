@@ -1,0 +1,31 @@
+INFO:root:Epoch: 1/10, Train Loss: 2.57600033, Val Loss: 8.68278113, Val Accuracy: 0.11325000, Bias aligned accuracy: 0.0, Bias conflicting accuracy: 1.0
+INFO:root:Epoch 1 training time: 44.58 seconds
+INFO:root:Saving Model State
+INFO:root:Epoch: 2/10, Train Loss: 11.77365578, Val Loss: 2.38386089, Val Accuracy: 0.07341667, Bias aligned accuracy: 0.0, Bias conflicting accuracy: 0.5199166666666667
+INFO:root:Epoch 2 training time: 50.64 seconds
+INFO:root:Saving Model State
+INFO:root:Epoch: 3/10, Train Loss: 13.86242935, Val Loss: 5.28791169, Val Accuracy: 0.18650000, Bias aligned accuracy: 0.00016666666666666666, Bias conflicting accuracy: 0.99575
+INFO:root:Epoch 3 training time: 54.24 seconds
+INFO:root:Epoch: 4/10, Train Loss: 17.43213305, Val Loss: 9.91018779, Val Accuracy: 0.09566667, Bias aligned accuracy: 0.16258333333333333, Bias conflicting accuracy: 0.30366666666666664
+INFO:root:Epoch 4 training time: 52.73 seconds
+INFO:root:Epoch: 5/10, Train Loss: 20.85296058, Val Loss: 2.35754694, Val Accuracy: 0.10291667, Bias aligned accuracy: 0.10175, Bias conflicting accuracy: 0.21441666666666667
+INFO:root:Epoch 5 training time: 58.03 seconds
+INFO:root:Saving Model State
+INFO:root:Epoch: 6/10, Train Loss: 19.71367896, Val Loss: 4.50252759, Val Accuracy: 0.11825000, Bias aligned accuracy: 0.10158333333333333, Bias conflicting accuracy: 0.4181666666666667
+INFO:root:Epoch 6 training time: 52.08 seconds
+INFO:root:Epoch: 7/10, Train Loss: 19.81341855, Val Loss: 5.40536534, Val Accuracy: 0.11975000, Bias aligned accuracy: 0.101, Bias conflicting accuracy: 0.41875
+INFO:root:Epoch 7 training time: 53.81 seconds
+INFO:root:Epoch: 8/10, Train Loss: 18.57623578, Val Loss: 14.26961654, Val Accuracy: 0.19533333, Bias aligned accuracy: 0.0, Bias conflicting accuracy: 0.7185
+INFO:root:Epoch 8 training time: 53.04 seconds
+INFO:root:Epoch: 9/10, Train Loss: 15.04761015, Val Loss: 8.03547871, Val Accuracy: 0.13666667, Bias aligned accuracy: 0.0, Bias conflicting accuracy: 0.72625
+INFO:root:Epoch 9 training time: 216.44 seconds
+INFO:root:Epoch: 10/10, Train Loss: 19.18118889, Val Loss: 11.84062113, Val Accuracy: 0.19641667, Bias aligned accuracy: 0.10758333333333334, Bias conflicting accuracy: 0.52025
+INFO:root:Epoch 10 training time: 50.10 seconds
+INFO:root:Total training time: 686.16 seconds
+INFO:root:Total data transferred: 16.11 MB
+INFO:root:Average CPU usage: 0.82%
+INFO:root:Average memory usage: 83.40%
+INFO:root:Bias-Aligned Test accuracy 0.11000000
+INFO:root:Bias-Neutral Test accuracy 0.19630000
+INFO:root:Bias-Conflicting Test accuracy 0.51360000
+INFO:root:cMNIST C Test accuracy 0.00660000
