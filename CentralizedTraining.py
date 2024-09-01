@@ -19,14 +19,14 @@ BATCH_SIZE = 10
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Device:', DEVICE)
 DATASET = "grayscale_mnist_3_channels"
-exp_num = 1
+exp_num = 7
 if exp_num == 9:
     NUM_CLIENTS = 3
 else:
     NUM_CLIENTS = 4
 apply_l2 = False
-sub_exp_num = 1
-opt = 'SGD'
+sub_exp_num = 2
+opt = 'Adam'
 
 
 def train(model, device, dataset, criterion, optimizer, apply_l2=False, lambda_l2=0.01):
@@ -218,49 +218,45 @@ def evaluate_model(model, criterion, logger):
     print(f"cMNIST C Test Accuracy: {accuracy_cMNIST_C:.8f}")
 
 if __name__ == "__main__":
-    for i in range(1, 10):
-        exp_num = i
-        for j in range(1, 4):
-            sub_exp_num = j
-            setup_directories()
-            logger = setup_logging(exp_num, NUM_EPOCHS, apply_l2)
+    setup_directories()
+    logger = setup_logging(exp_num, NUM_EPOCHS, apply_l2)
 
-            train_color, val_color, test_color, train_gray3, val_gray3, test_gray3, train_bias_conflict, val_bias_conflict, test_bias_conflict = load_data(
-                VIS_DATA, BATCH_SIZE)
-            train_MNIST_C, val_MNIST_C, test_MNIST_C = load_dataset(val_split=0.2, batch_size=BATCH_SIZE,
-                                                                    dataset="color_MNIST_C")
+    train_color, val_color, test_color, train_gray3, val_gray3, test_gray3, train_bias_conflict, val_bias_conflict, test_bias_conflict = load_data(
+        VIS_DATA, BATCH_SIZE)
+    train_MNIST_C, val_MNIST_C, test_MNIST_C = load_dataset(val_split=0.2, batch_size=BATCH_SIZE,
+                                                            dataset="color_MNIST_C")
 
 
 
-            """
-            Should I combine the datasets too for the testing?
-            Thoughts:
-            - While it could be descriptive, I believe that maintaining the bias-aligned, bias-conflicting and bias neutral tests
-                could be the most useful.
-                Thus: Here use the gray3 mnist for the loss function
-                And the color mnist for the final testing?
-            """
+    """
+    Should I combine the datasets too for the testing?
+    Thoughts:
+    - While it could be descriptive, I believe that maintaining the bias-aligned, bias-conflicting and bias neutral tests
+        could be the most useful.
+        Thus: Here use the gray3 mnist for the loss function
+        And the color mnist for the final testing?
+    """
 
-            train_data = combine_datasets(train_color, train_gray3, train_bias_conflict, exp_num)
-
-
-            validation_data = val_gray3
-            # let's try to change the validation data to bias conflicting, so that the loss function will use it
-            #validation_data = val_bias_conflict
-            test_data = test_color # this one kinda not necessary because here I divided the bias aligned to be a different test (should do the same for federated...)
+    train_data = combine_datasets(train_color, train_gray3, train_bias_conflict, exp_num)
 
 
-            model_path = f"models/{exp_num}_{NUM_EPOCHS}_{str(apply_l2)}_{opt}_{sub_exp_num}_centralized.sav"
-
-            model = initialize_model(model_path)
-            criterion = torch.nn.CrossEntropyLoss()
-            if opt == 'Adam':
-                optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-            else:
-                optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    validation_data = val_gray3
+    # let's try to change the validation data to bias conflicting, so that the loss function will use it
+    #validation_data = val_bias_conflict
+    test_data = test_color # this one kinda not necessary because here I divided the bias aligned to be a different test (should do the same for federated...)
 
 
-            if model.training:
-                model = train_loop(model, train_data, validation_data, val_color, val_bias_conflict, criterion, optimizer, model_path, logger)
+    model_path = f"models/{exp_num}_{NUM_EPOCHS}_{str(apply_l2)}_{opt}_{sub_exp_num}_centralized.sav"
 
-            evaluate_model(model, criterion, logger)
+    model = initialize_model(model_path)
+    criterion = torch.nn.CrossEntropyLoss()
+    if opt == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    else:
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+
+
+    if model.training:
+        model = train_loop(model, train_data, validation_data, val_color, val_bias_conflict, criterion, optimizer, model_path, logger)
+
+    evaluate_model(model, criterion, logger)

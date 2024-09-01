@@ -17,8 +17,8 @@ colors = [
 
 arquitecture = 'Federated'
 #arquitecture = 'Centralized'
-optimizer = 'Adam'
-#optimizer = 'SGD'
+#optimizer = 'Adam'
+optimizer = 'SGD'
 
 
 def plot_global_accuracy_across_experiments(experiments, title='Global Model Accuracy Across Experiments',
@@ -32,6 +32,7 @@ def plot_global_accuracy_across_experiments(experiments, title='Global Model Acc
 
         plt.errorbar(epochs, global_val_acc, yerr=std_dev, label=f'{exp_name}',
                      capsize=5, fmt='-o', color=colors[i], linewidth=2)
+        print(f'{exp_name} - bias_neutral accuracy: {global_val_acc}. standard deviation: {std_dev}')
 
     plt.title(title, fontsize=20)
     plt.xlabel('Epochs', fontsize=16)
@@ -57,6 +58,7 @@ def plot_bias_aligned_accuracy_across_experiments(experiments, title='Bias Align
 
         plt.errorbar(epochs, bias_aligned_acc, yerr=std_dev, label=f'{exp_name}',
                      capsize=5, fmt='-o', color=colors[i], linewidth=2)
+        print(f'{exp_name} - bias_aligned accuracy: {bias_aligned_acc}. standard deviation: {std_dev}')
 
     plt.title(title, fontsize=20)
     plt.xlabel('Epochs', fontsize=16)
@@ -82,6 +84,7 @@ def plot_bias_conflicting_accuracy_across_experiments(experiments, title='Bias C
 
         plt.errorbar(epochs, bias_conflicting_acc, yerr=std_dev, label=f'{exp_name}',
                      capsize=5, fmt='-o', color=colors[i], linewidth=2)
+        print(f'{exp_name} - cMNIST B accuracy: {bias_conflicting_acc}. standard deviation: {std_dev}')
 
     plt.title(title, fontsize=20)
     plt.xlabel('Epochs', fontsize=16)
@@ -108,6 +111,7 @@ def plot_client_accuracies(epochs, client_accuracies, std_devs=None, title='Clie
         else:
             plt.plot(epochs, mean_accuracies, label=f'Client {client_id} Mean Accuracy', color=colors[i % len(colors)],
                      linewidth=2)
+        print(f'Client {client_id} accuracy: {mean_accuracies} - standard deviation: {std_dev}')
 
     plt.title(title, fontsize=20)
     plt.xlabel('Epochs', fontsize=16)
@@ -348,6 +352,7 @@ def plot_cmnist_c_accuracy_across_experiments(experiments, title='C MNIST_C Test
     experiment_names = list(experiments.keys())
     cmnist_c_accuracies = [data['cmnist_c_acc'] for data in experiments.values()]
     std_devs = [data['std_dev_cmnist_c'] for data in experiments.values()]
+    print(f'cMNIST C accuracies: {cmnist_c_accuracies} - Standard deviations: {std_devs}')
 
     bars = plt.bar(range(1, len(experiment_names) + 1), cmnist_c_accuracies, yerr=std_devs, capsize=5,
                    color=colors[:len(experiment_names)], edgecolor='black', label=experiment_names)
@@ -403,6 +408,7 @@ if __name__ == "__main__":
             'std_dev_cmnist_c': std_devs['cmnist_c_acc']  # Standard deviation for C MNIST_C
         }
 
+        print(f'Experiment name: {exp_name}')
         # Plot client local accuracies
         plot_client_accuracies(means['epochs'], means['client_accuracies'], std_devs['client_accuracies'],
                                title=f'Client Local Training Accuracies - {exp_name} - {optimizer}',

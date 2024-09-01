@@ -15,8 +15,8 @@ colors = [
     '#bcbd22',  # Olive
 ]
 
-#optimizer = 'Adam'
-optimizer = 'SGD'
+optimizer = 'Adam'
+#optimizer = 'SGD'
 
 
 def read_centralized_log_file(log_file_path):
@@ -137,6 +137,7 @@ def plot_experiment_data(experiments, title='Accuracy Across Experiments', y_lab
         epochs = data['epochs']
         mean_acc = data['val_acc']  # Mean accuracy across trials
         std_dev = data['std_dev_val_acc']  # Standard deviation across trials
+        print(f'{exp_name} - accuracy: {mean_acc} - stddev: {std_dev}')
 
         # Plotting mean accuracy with error bars representing the standard deviation
         plt.errorbar(epochs, mean_acc, yerr=std_dev, label=exp_name, capsize=5, fmt='-o',
@@ -161,6 +162,7 @@ def plot_cmnist_c_accuracy_across_experiments(experiments, title='cMNIST C Test 
     experiment_names = list(experiments.keys())
     cmnist_c_accuracies = [data['cmnist_c_acc'] for data in experiments.values()]
     std_devs = [data['std_dev_cmnist_c'] for data in experiments.values()]
+    print(f'cMNIST C accuracies: {cmnist_c_accuracies} - Standard deviation: {std_devs}\n')
 
     # Use range(1, len(experiment_names) + 1) for x-axis values
     bars = plt.bar(range(1, len(experiment_names) + 1), cmnist_c_accuracies, yerr=std_devs, capsize=5,
@@ -214,6 +216,7 @@ if __name__ == "__main__":
             'std_dev_cmnist_c': std_devs['cmnist_c_acc']  # Adding standard deviation for cMNIST C Test accuracy
         }
     # Plot validation accuracy across all experiments
+    print('MNIST accuracies')
     plot_experiment_data(
         experiments,
         title=f'Centralized Accuracies - Centralized - {optimizer}',
@@ -221,6 +224,7 @@ if __name__ == "__main__":
         save_path=f'final_graphs/centralized_val_accuracy_across_experiments_{optimizer}.png'
     )
 
+    print('cMNIST A accuracies')
     # Plot bias-aligned accuracy across all experiments
     plot_experiment_data(
         {exp_name: {'epochs': data['epochs'], 'val_acc': data['bias_aligned_acc'], 'std_dev_val_acc': data['std_dev_bias_aligned']}
@@ -230,6 +234,7 @@ if __name__ == "__main__":
         save_path=f'final_graphs/centralized_bias_aligned_accuracy_across_experiments_{optimizer}.png'
     )
 
+    print('cMNIST B accuracies')
     # Plot bias-conflicting accuracy across all experiments
     plot_experiment_data(
         {exp_name: {'epochs': data['epochs'], 'val_acc': data['bias_conflicting_acc'], 'std_dev_val_acc': data['std_dev_bias_conflicting']}
@@ -238,6 +243,8 @@ if __name__ == "__main__":
         y_label='cMNIST-B Accuracies',
         save_path=f'final_graphs/centralized_bias_conflicting_accuracy_across_experiments_{optimizer}.png'
     )
+
+    print('cMNIST C accuracies')
     # Plot cMNIST C Test accuracy across all experiments
     plot_cmnist_c_accuracy_across_experiments(
         experiments,
