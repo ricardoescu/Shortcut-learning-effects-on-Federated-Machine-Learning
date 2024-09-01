@@ -9,7 +9,7 @@ INFO:root:Epoch 3 training time: 49.88 seconds
 INFO:root:Saving Model State
 INFO:root:Epoch: 4/10, Train Loss: 0.66489596, Val Loss: 0.07233793, Val Accuracy: 0.97683333, Bias aligned accuracy: 0.6820833333333334, Bias conflicting accuracy: 0.9839166666666667
 INFO:root:Epoch 4 training time: 49.85 seconds
-INFO:root:Saving Model State
+INFO:root:Saving Model Stateo
 INFO:root:Epoch: 5/10, Train Loss: 0.55658317, Val Loss: 0.06592670, Val Accuracy: 0.97975000, Bias aligned accuracy: 0.75775, Bias conflicting accuracy: 0.96525
 INFO:root:Epoch 5 training time: 49.30 seconds
 INFO:root:Saving Model State
