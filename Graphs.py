@@ -17,82 +17,29 @@ colors = [
 
 arquitecture = 'Federated'
 #arquitecture = 'Centralized'
-#optimizer = 'Adam'
-optimizer = 'SGD'
+optimizer = 'Adam'
+#optimizer = 'SGD'
 
-
-def plot_global_accuracy_across_experiments(experiments, title='Global Model Accuracy Across Experiments',
-                                            save_path=None):
-    plt.figure(figsize=(10, 6))
+def plot_experiment_data(experiments, title='Accuracy Across Experiments', y_label='Accuracy', save_path=None):
+    plt.figure(figsize=(12, 8))
 
     for i, (exp_name, data) in enumerate(experiments.items()):
         epochs = data['epochs']
-        global_val_acc = data['val_acc']
-        std_dev = data['std_dev']
+        mean_acc = data['val_acc']  # Mean accuracy across trials
+        std_dev = data['std_dev']  # Standard deviation across trials
+        print(f'{exp_name} - accuracy: {mean_acc} - stddev: {std_dev}')
 
-        plt.errorbar(epochs, global_val_acc, yerr=std_dev, label=f'{exp_name}',
-                     capsize=5, fmt='-o', color=colors[i], linewidth=2)
-        print(f'{exp_name} - bias_neutral accuracy: {global_val_acc}. standard deviation: {std_dev}')
-
-    plt.title(title, fontsize=20)
-    plt.xlabel('Epochs', fontsize=16)
-    plt.ylabel('Accuracy', fontsize=16)
-    plt.legend(loc='upper left', fontsize=6, bbox_to_anchor=(0.98, 0.7))
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.ylim([0, 1])
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight', dpi=300)
-    plt.show()
-
-
-def plot_bias_aligned_accuracy_across_experiments(experiments, title='Bias Aligned Accuracy Across Experiments',
-                                                  save_path=None):
-    plt.figure(figsize=(10, 6))
-
-    for i, (exp_name, data) in enumerate(experiments.items()):
-        epochs = data['epochs']
-        bias_aligned_acc = data['bias_aligned_acc']
-        std_dev = data['std_dev_bias_aligned']
-
-        plt.errorbar(epochs, bias_aligned_acc, yerr=std_dev, label=f'{exp_name}',
-                     capsize=5, fmt='-o', color=colors[i], linewidth=2)
-        print(f'{exp_name} - bias_aligned accuracy: {bias_aligned_acc}. standard deviation: {std_dev}')
+        # Plotting mean accuracy with error bars representing the standard deviation
+        plt.errorbar(epochs, mean_acc, yerr=std_dev, label=exp_name, capsize=5, fmt='-o',
+                     color=colors[i % len(colors)], linewidth=2)
 
     plt.title(title, fontsize=20)
     plt.xlabel('Epochs', fontsize=16)
-    plt.ylabel('Accuracy', fontsize=16)
-    plt.legend(loc='upper left', fontsize=6, bbox_to_anchor=(0.98, 0.7))
+    plt.ylabel(y_label, fontsize=16)
+    plt.legend(loc='upper left', fontsize=8, bbox_to_anchor=(1, 1))
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.ylim([0, 1])
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight', dpi=300)
-    plt.show()
-
-
-def plot_bias_conflicting_accuracy_across_experiments(experiments, title='Bias Conflicting Accuracy Across Experiments',
-                                                      save_path=None):
-    plt.figure(figsize=(10, 6))
-
-    for i, (exp_name, data) in enumerate(experiments.items()):
-        epochs = data['epochs']
-        bias_conflicting_acc = data['bias_conflicting_acc']
-        std_dev = data['std_dev_bias_conflicting']
-
-        plt.errorbar(epochs, bias_conflicting_acc, yerr=std_dev, label=f'{exp_name}',
-                     capsize=5, fmt='-o', color=colors[i], linewidth=2)
-        print(f'{exp_name} - cMNIST B accuracy: {bias_conflicting_acc}. standard deviation: {std_dev}')
-
-    plt.title(title, fontsize=20)
-    plt.xlabel('Epochs', fontsize=16)
-    plt.ylabel('Accuracy', fontsize=16)
-    plt.legend(loc='upper left', fontsize=6, bbox_to_anchor=(0.98, 0.7))
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     plt.ylim([0, 1])
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=300)
@@ -172,8 +119,8 @@ def read_log_file(log_file_path):
     bias_neutral_acc = None
     bias_conflicting_acc = None
     cmnist_c_acc = None
-    bias_aligned_acc = []  # To store bias-aligned accuracies per epoch
-    bias_conflicting_acc_per_epoch = []  # To store bias-conflicting accuracies per epoch
+    bias_aligned_acc = []
+    bias_conflicting_acc_per_epoch = []
 
     for line in lines:
         if "Client" in line and "Local Training Accuracy" in line:
@@ -196,7 +143,7 @@ def read_log_file(log_file_path):
                 bias_aligned_part = parts[4].split(': ')[1]
                 bias_conflicting_part = parts[5].split(': ')[1]
 
-                epoch = int(epoch_part)  # Convert only the current epoch number to int
+                epoch = int(epoch_part)
                 train_loss_value = float(train_loss_part)
                 val_loss_value = float(val_loss_part)
                 val_acc_value = float(val_acc_part)
@@ -243,75 +190,53 @@ def aggregate_experiment_data(log_files):
         epochs, train_loss, val_loss, val_acc, client_accuracies, iid_acc, bias_neutral_acc, bias_conflicting_acc, cmnist_c_acc, bias_aligned_acc, bias_conflicting_acc_per_epoch = read_log_file(
             log_file)
 
-        if epochs:  # Ensure epochs are not empty
-            aggregated_data['epochs'].append(epochs)
-        if train_loss:
-            aggregated_data['train_loss'].append(train_loss)
-        if val_loss:
-            aggregated_data['val_loss'].append(val_loss)
-        if val_acc:
-            aggregated_data['val_acc'].append(val_acc)
-        if bias_aligned_acc:
-            aggregated_data['bias_aligned_acc'].append(bias_aligned_acc)
-        if bias_conflicting_acc_per_epoch:
-            aggregated_data['bias_conflicting_acc_per_epoch'].append(bias_conflicting_acc_per_epoch)
+        aggregated_data['epochs'].append(epochs)
+        aggregated_data['train_loss'].append(train_loss)
+        aggregated_data['val_loss'].append(val_loss)
+        aggregated_data['val_acc'].append(val_acc)
+        aggregated_data['bias_aligned_acc'].append(bias_aligned_acc)
+        aggregated_data['bias_conflicting_acc_per_epoch'].append(bias_conflicting_acc_per_epoch)
 
         for client_id, accuracies in client_accuracies.items():
             if client_id not in aggregated_data['client_accuracies']:
                 aggregated_data['client_accuracies'][client_id] = []
             aggregated_data['client_accuracies'][client_id].append(accuracies)
 
-        if iid_acc is not None:
-            aggregated_data['iid_acc'].append(iid_acc)
-        if bias_neutral_acc is not None:
-            aggregated_data['bias_neutral_acc'].append(bias_neutral_acc)
-        if bias_conflicting_acc is not None:
-            aggregated_data['bias_conflicting_acc'].append(bias_conflicting_acc)
-        if cmnist_c_acc is not None:
-            aggregated_data['cmnist_c_acc'].append(cmnist_c_acc)
+        aggregated_data['iid_acc'].append(iid_acc)
+        aggregated_data['bias_neutral_acc'].append(bias_neutral_acc)
+        aggregated_data['bias_conflicting_acc'].append(bias_conflicting_acc)
+        aggregated_data['cmnist_c_acc'].append(cmnist_c_acc)
 
     return aggregated_data
 
 
 def compute_means_and_stds(aggregated_data):
     means = {
-        'epochs': np.mean(aggregated_data['epochs'], axis=0) if aggregated_data['epochs'] else [],
-        'train_loss': np.mean(aggregated_data['train_loss'], axis=0) if aggregated_data['train_loss'] else [],
-        'val_loss': np.mean(aggregated_data['val_loss'], axis=0) if aggregated_data['val_loss'] else [],
-        'val_acc': np.mean(aggregated_data['val_acc'], axis=0) if aggregated_data['val_acc'] else [],
+        'epochs': np.mean(aggregated_data['epochs'], axis=0),
+        'train_loss': np.mean(aggregated_data['train_loss'], axis=0),
+        'val_loss': np.mean(aggregated_data['val_loss'], axis=0),
+        'val_acc': np.mean(aggregated_data['val_acc'], axis=0),
         'client_accuracies': {},
-        'iid_acc': np.mean([x for x in aggregated_data['iid_acc'] if x is not None]) if aggregated_data[
-            'iid_acc'] else None,
-        'bias_neutral_acc': np.mean([x for x in aggregated_data['bias_neutral_acc'] if x is not None]) if
-        aggregated_data['bias_neutral_acc'] else None,
-        'bias_conflicting_acc': np.mean([x for x in aggregated_data['bias_conflicting_acc'] if x is not None]) if
-        aggregated_data['bias_conflicting_acc'] else None,
-        'cmnist_c_acc': np.mean([x for x in aggregated_data['cmnist_c_acc'] if x is not None]) if
-        aggregated_data['cmnist_c_acc'] else None,
-        'bias_aligned_acc': np.mean(aggregated_data['bias_aligned_acc'], axis=0) if aggregated_data[
-            'bias_aligned_acc'] else [],
-        'bias_conflicting_acc_per_epoch': np.mean(aggregated_data['bias_conflicting_acc_per_epoch'], axis=0) if
-        aggregated_data['bias_conflicting_acc_per_epoch'] else []
+        'iid_acc': np.mean([x for x in aggregated_data['iid_acc']]),
+        'bias_neutral_acc': np.mean([x for x in aggregated_data['bias_neutral_acc']]),
+        'bias_conflicting_acc': np.mean([x for x in aggregated_data['bias_conflicting_acc']]),
+        'cmnist_c_acc': np.mean([x for x in aggregated_data['cmnist_c_acc']]),
+        'bias_aligned_acc': np.mean(aggregated_data['bias_aligned_acc'], axis=0),
+        'bias_conflicting_acc_per_epoch': np.mean(aggregated_data['bias_conflicting_acc_per_epoch'], axis=0)
     }
 
     std_devs = {
-        'epochs': np.std(aggregated_data['epochs'], axis=0) if aggregated_data['epochs'] else [],
-        'train_loss': np.std(aggregated_data['train_loss'], axis=0) if aggregated_data['train_loss'] else [],
-        'val_loss': np.std(aggregated_data['val_loss'], axis=0) if aggregated_data['val_loss'] else [],
-        'val_acc': np.std(aggregated_data['val_acc'], axis=0) if aggregated_data['val_acc'] else [],
+        'epochs': np.std(aggregated_data['epochs'], axis=0),
+        'train_loss': np.std(aggregated_data['train_loss'], axis=0),
+        'val_loss': np.std(aggregated_data['val_loss'], axis=0),
+        'val_acc': np.std(aggregated_data['val_acc'], axis=0),
         'client_accuracies': {},
-        'iid_acc': np.std([x for x in aggregated_data['iid_acc'] if x is not None]) if aggregated_data[
-            'iid_acc'] else None,
-        'bias_neutral_acc': np.std([x for x in aggregated_data['bias_neutral_acc'] if x is not None]) if
-        aggregated_data['bias_neutral_acc'] else None,
-        'bias_conflicting_acc': np.std([x for x in aggregated_data['bias_conflicting_acc'] if x is not None]) if
-        aggregated_data['bias_conflicting_acc'] else None,
-        'cmnist_c_acc': np.std([x for x in aggregated_data['cmnist_c_acc'] if x is not None]) if
-        aggregated_data['cmnist_c_acc'] else None,
-        'bias_aligned_acc': np.std(aggregated_data['bias_aligned_acc'], axis=0) if aggregated_data[
-            'bias_aligned_acc'] else [],
-        'bias_conflicting_acc_per_epoch': np.std(aggregated_data['bias_conflicting_acc_per_epoch'], axis=0) if
-        aggregated_data['bias_conflicting_acc_per_epoch'] else []
+        'iid_acc': np.std([x for x in aggregated_data['iid_acc']]),
+        'bias_neutral_acc': np.std([x for x in aggregated_data['bias_neutral_acc']]),
+        'bias_conflicting_acc': np.std([x for x in aggregated_data['bias_conflicting_acc']]),
+        'cmnist_c_acc': np.std([x for x in aggregated_data['cmnist_c_acc']]),
+        'bias_aligned_acc': np.std(aggregated_data['bias_aligned_acc'], axis=0),
+        'bias_conflicting_acc_per_epoch': np.std(aggregated_data['bias_conflicting_acc_per_epoch'], axis=0)
     }
 
     for client_id, client_accuracies in aggregated_data['client_accuracies'].items():
@@ -379,6 +304,116 @@ def plot_cmnist_c_accuracy_across_experiments(experiments, title='C MNIST_C Test
         plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.show()
 
+def read_centralized_log_file(log_file_path):
+    with open(log_file_path) as f:
+        lines = f.readlines()
+
+    epochs = []
+    train_loss = []
+    val_loss = []
+    val_acc = []
+    bias_aligned_acc = []
+    bias_conflicting_acc = []
+    cmnist_c_acc = None
+
+    for line in lines:
+        if "Epoch:" in line and "Train Loss:" in line:
+            try:
+                parts = line.split(", ")
+                epoch_part = parts[0].split(': ')[1].split('/')[0]
+                train_loss_part = parts[1].split(': ')[1]
+                val_loss_part = parts[2].split(': ')[1]
+                val_acc_part = parts[3].split(': ')[1]
+                bias_aligned_part = parts[4].split(': ')[1]
+                bias_conflicting_part = parts[5].split(': ')[1]
+
+                epoch = int(epoch_part)
+                train_loss_value = float(train_loss_part)
+                val_loss_value = float(val_loss_part)
+                val_acc_value = float(val_acc_part)
+                bias_aligned_value = float(bias_aligned_part)
+                bias_conflicting_value = float(bias_conflicting_part)
+
+                epochs.append(epoch)
+                train_loss.append(train_loss_value)
+                val_loss.append(val_loss_value)
+                val_acc.append(val_acc_value)
+                bias_aligned_acc.append(bias_aligned_value)
+                bias_conflicting_acc.append(bias_conflicting_value)
+            except (IndexError, ValueError) as e:
+                print(f"Error parsing line: {line.strip()}. Error: {e}")
+
+        if "cMNIST C Test accuracy" in line:
+            cmnist_c_acc = float(line.split("cMNIST C Test accuracy ")[1])
+
+    return epochs, val_acc, bias_aligned_acc, bias_conflicting_acc, cmnist_c_acc
+
+
+def aggregate_experiment_data_centralized(log_files):
+    max_epochs = 0
+    aggregated_data = {
+        'epochs': [],
+        'val_acc': [],
+        'bias_aligned_acc': [],
+        'bias_conflicting_acc': [],
+        'cmnist_c_acc': []
+    }
+
+    for log_file in log_files:
+        epochs, val_acc, bias_aligned_acc, bias_conflicting_acc, cmnist_c_acc = read_centralized_log_file(log_file)
+        max_epochs = max(max_epochs, len(epochs))
+        aggregated_data['epochs'].append(epochs)
+        aggregated_data['val_acc'].append(val_acc)
+        aggregated_data['bias_aligned_acc'].append(bias_aligned_acc)
+        aggregated_data['bias_conflicting_acc'].append(bias_conflicting_acc)
+        if cmnist_c_acc is not None:
+            aggregated_data['cmnist_c_acc'].append(cmnist_c_acc)
+
+    # Padding the sequences to have the same length
+    for key in ['epochs', 'val_acc', 'bias_aligned_acc', 'bias_conflicting_acc']:
+        for i in range(len(aggregated_data[key])):
+            if len(aggregated_data[key][i]) < max_epochs:
+                diff = max_epochs - len(aggregated_data[key][i])
+                aggregated_data[key][i] += [np.nan] * diff  # Fill with NaN
+
+    return aggregated_data
+
+
+def compute_means_and_stds_centralized(aggregated_data):
+    means = {
+        'epochs': np.nanmean(aggregated_data['epochs'], axis=0),
+        'val_acc': np.nanmean(aggregated_data['val_acc'], axis=0),
+        'bias_aligned_acc': np.nanmean(aggregated_data['bias_aligned_acc'], axis=0),
+        'bias_conflicting_acc': np.nanmean(aggregated_data['bias_conflicting_acc'], axis=0),
+        'cmnist_c_acc': np.nanmean(aggregated_data['cmnist_c_acc']) if aggregated_data['cmnist_c_acc'] else None
+    }
+
+    std_devs = {
+        'val_acc': np.nanstd(aggregated_data['val_acc'], axis=0),
+        'bias_aligned_acc': np.nanstd(aggregated_data['bias_aligned_acc'], axis=0),
+        'bias_conflicting_acc': np.nanstd(aggregated_data['bias_conflicting_acc'], axis=0),
+        'cmnist_c_acc': np.nanstd(aggregated_data['cmnist_c_acc']) if aggregated_data['cmnist_c_acc'] else None
+    }
+
+    return means, std_devs
+
+
+def read_centralized_log_files(log_folder, experiment_numbers, num_trials):
+    all_log_files = []
+
+    for exp_num in experiment_numbers:
+        trial_files = []
+        for trial in range(1, num_trials + 1):
+            file_name = f"log_centralized_exp{exp_num}_10_False_{trial}_{optimizer}.log"
+            log_file_path = os.path.join(log_folder, file_name)
+            if os.path.exists(log_file_path):
+                trial_files.append(log_file_path)
+            else:
+                print(f"File not found: {log_file_path}")
+        all_log_files.append(trial_files)
+
+    return all_log_files
+
 if __name__ == "__main__":
     experiment_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     num_trials = 3
@@ -390,7 +425,7 @@ if __name__ == "__main__":
 
     for i, log_files in enumerate(all_log_files, start=1):
         if not log_files:
-            continue  # Skip if no log files found for this experiment
+            continue
 
         aggregated_data = aggregate_experiment_data(log_files)
         means, std_devs = compute_means_and_stds(aggregated_data)
@@ -414,27 +449,97 @@ if __name__ == "__main__":
                                title=f'Client Local Training Accuracies - {exp_name} - {optimizer}',
                                save_path=f'final_graphs/client_accuracies-{exp_name}_{optimizer}.png')
 
-        # Plot test results including C MNIST_C accuracy
-        plot_test_results(means['iid_acc'], means['bias_neutral_acc'], means['bias_conflicting_acc'],
-                          means['cmnist_c_acc'], std_devs,
-                          title=f'Test Results - {exp_name}', save_path=f'final_graphs/test_results-federated_{exp_name}_{optimizer}.png')
 
-    # Plot global model accuracy across all experiments
-    plot_global_accuracy_across_experiments(experiments,
-                                            title=f'MNIST Accuracy Across Experiments - {arquitecture} - {optimizer}',
-                                            save_path=f'final_graphs/global_accuracy_across_experiments_federated_{optimizer}.png')
+    plot_experiment_data(
+        experiments,
+        title=f'Federated Accuracies - {optimizer}',
+        y_label='Validation Accuracy',
+        #save_path=f'final_graphs/centralized_val_accuracy_across_experiments_{optimizer}.png'
+    )
 
+    print('cMNIST A accuracies')
     # Plot bias-aligned accuracy across all experiments
-    plot_bias_aligned_accuracy_across_experiments(experiments,
-                                                  title=f'cMNIST-A Accuracy Across Experiments - {arquitecture} - {optimizer}',
-                                                  save_path=f'final_graphs/bias_aligned_accuracy_across_experiments_federated_{optimizer}.png')
+    plot_experiment_data(
+        {exp_name: {'epochs': data['epochs'], 'val_acc': data['bias_aligned_acc'],
+                    'std_dev': data['std_dev_bias_aligned']}
+         for exp_name, data in experiments.items()},
+        title=f'cMNIST-A Accuracies - Federated - {optimizer}',
+        y_label='cMNIST-A Accuracies',
+        #save_path=f'final_graphs/centralized_bias_aligned_accuracy_across_experiments_{optimizer}.png'
+    )
 
+    print('cMNIST B accuracies')
     # Plot bias-conflicting accuracy across all experiments
-    plot_bias_conflicting_accuracy_across_experiments(experiments,
-                                                      title=f'cMNIST-B Accuracy Across Experiments - {arquitecture} - {optimizer}',
-                                                      save_path=f'final_graphs/bias_conflicting_accuracy_across_experiments_federated_{optimizer}.png')
+    plot_experiment_data(
+        {exp_name: {'epochs': data['epochs'], 'val_acc': data['bias_conflicting_acc'],
+                    'std_dev': data['std_dev_bias_conflicting']}
+         for exp_name, data in experiments.items()},
+        title=f'cMNIST-B Accuracies - Federated - {optimizer}',
+        y_label='cMNIST-B Accuracies',
+        #save_path=f'final_graphs/centralized_bias_conflicting_accuracy_across_experiments_{optimizer}.png'
+    )
 
     # Plot C MNIST_C accuracy across all experiments
     plot_cmnist_c_accuracy_across_experiments(experiments,
                                               title=f'C MNIST_C Test Accuracy Across Experiments - {arquitecture} - {optimizer}',
                                               save_path=f'final_graphs/cmnist_c_accuracy_across_experiments_federated_{optimizer}.png')
+    centralized_log_files = read_centralized_log_files(log_folder, experiment_numbers, num_trials)
+    experiments_c = {}
+
+    for i, log_files in enumerate(centralized_log_files, start=1):
+        if not log_files:
+            continue
+
+        aggregated_data = aggregate_experiment_data_centralized(log_files)
+        means, std_devs = compute_means_and_stds_centralized(aggregated_data)
+
+        exp_name = f"Exp {i}"
+        experiments_c[exp_name] = {
+            'epochs': means['epochs'],
+            'val_acc': means['val_acc'],
+            'std_dev': std_devs['val_acc'],
+            'bias_aligned_acc': means['bias_aligned_acc'],
+            'std_dev_bias_aligned': std_devs['bias_aligned_acc'],
+            'bias_conflicting_acc': means['bias_conflicting_acc'],
+            'std_dev_bias_conflicting': std_devs['bias_conflicting_acc'],
+            'cmnist_c_acc': means['cmnist_c_acc'],
+            'std_dev_cmnist_c': std_devs['cmnist_c_acc']
+        }
+    # Plot validation accuracy across all experiments
+    print('Centralized MNIST accuracies')
+    plot_experiment_data(
+        experiments_c,
+        title=f'Centralized Accuracies - Centralized - {optimizer}',
+        y_label='Validation Accuracy',
+        save_path=f'final_graphs/centralized_val_accuracy_across_experiments_{optimizer}.png'
+    )
+
+    print('Centralized cMNIST A accuracies')
+    # Plot bias-aligned accuracy across all experiments
+    plot_experiment_data(
+        {exp_name: {'epochs': data['epochs'], 'val_acc': data['bias_aligned_acc'],
+                    'std_dev': data['std_dev_bias_aligned']}
+         for exp_name, data in experiments_c.items()},
+        title=f'cMNIST-A Accuracies - Centralized - {optimizer}',
+        y_label='cMNIST-A Accuracies',
+        save_path=f'final_graphs/centralized_bias_aligned_accuracy_across_experiments_{optimizer}.png'
+    )
+
+    print('Centralized cMNIST B accuracies')
+    # Plot bias-conflicting accuracy across all experiments
+    plot_experiment_data(
+        {exp_name: {'epochs': data['epochs'], 'val_acc': data['bias_conflicting_acc'],
+                    'std_dev': data['std_dev_bias_conflicting']}
+         for exp_name, data in experiments_c.items()},
+        title=f'cMNIST-B Accuracies - Centralized - {optimizer}',
+        y_label='cMNIST-B Accuracies',
+        save_path=f'final_graphs/centralized_bias_conflicting_accuracy_across_experiments_{optimizer}.png'
+    )
+
+    print('Centralized cMNIST C accuracies')
+    # Plot cMNIST C Test accuracy across all experiments
+    plot_cmnist_c_accuracy_across_experiments(
+        experiments_c,
+        title=f'cMNIST C Final accuracy across experiments - Centralized - {optimizer}',
+        save_path=f'final_graphs/cmnist_c_accuracy_across_experiments_centralized_{optimizer}.png'
+    )
