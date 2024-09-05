@@ -17,8 +17,8 @@ colors = [
 
 arquitecture = 'Federated'
 #arquitecture = 'Centralized'
-optimizer = 'Adam'
-#optimizer = 'SGD'
+#optimizer = 'Adam'
+optimizer = 'SGD'
 
 def plot_experiment_data(experiments, title='Accuracy Across Experiments', y_label='Accuracy', save_path=None):
     plt.figure(figsize=(12, 8))
@@ -414,6 +414,39 @@ def read_centralized_log_files(log_folder, experiment_numbers, num_trials):
 
     return all_log_files
 
+
+def plot_metrics_per_epoch(epochs, accuracy, bias_aligned_acc, bias_conflicting_acc,
+                           std_acc, std_bias_aligned, std_bias_conflicting,
+                           title='Metrics Across Epochs', save_path=None):
+    plt.figure(figsize=(12, 8))
+
+    # Plotting accuracy with error bars
+    plt.errorbar(epochs, accuracy, yerr=std_acc, label='Validation Accuracy',
+                 color=colors[0], linestyle='-', marker='o', linewidth=2, capsize=5)
+
+    # Plotting bias-aligned accuracy with error bars
+    plt.errorbar(epochs, bias_aligned_acc, yerr=std_bias_aligned, label='Bias Aligned Accuracy (cMNIST-A)',
+                 color=colors[1], linestyle='-', marker='x', linewidth=2, capsize=5)
+
+    # Plotting bias-conflicting accuracy with error bars
+    plt.errorbar(epochs, bias_conflicting_acc, yerr=std_bias_conflicting, label='Bias Conflicting Accuracy (cMNIST-B)',
+                 color=colors[2], linestyle='-', marker='s', linewidth=2, capsize=5)
+
+    plt.title(title, fontsize=20)
+    plt.xlabel('Epochs', fontsize=16)
+    plt.ylabel('Accuracy', fontsize=16)
+    plt.legend(loc='best', fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.ylim([0, 1])
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+
+    plt.show()
+
+
 if __name__ == "__main__":
     experiment_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     num_trials = 3
@@ -445,9 +478,21 @@ if __name__ == "__main__":
 
         print(f'Experiment name: {exp_name}')
         # Plot client local accuracies
-        plot_client_accuracies(means['epochs'], means['client_accuracies'], std_devs['client_accuracies'],
+        """plot_client_accuracies(means['epochs'], means['client_accuracies'], std_devs['client_accuracies'],
                                title=f'Client Local Training Accuracies - {exp_name} - {optimizer}',
-                               save_path=f'final_graphs/client_accuracies-{exp_name}_{optimizer}.png')
+                               save_path=f'final_graphs/client_accuracies-{exp_name}_{optimizer}.png')"""
+
+        plot_metrics_per_epoch(
+            epochs=means['epochs'],
+            accuracy=means['val_acc'],
+            bias_aligned_acc=means['bias_aligned_acc'],
+            bias_conflicting_acc=means['bias_conflicting_acc_per_epoch'],
+            std_acc=std_devs['val_acc'],
+            std_bias_aligned=std_devs['bias_aligned_acc'],
+            std_bias_conflicting=std_devs['bias_conflicting_acc_per_epoch'],
+            title=f'FL Metrics Across Epochs - {optimizer} - {exp_name}',
+            save_path=f'final_graphs/FL_metrics_across_epochs_{exp_name}_{optimizer}.png'
+        )
 
 
     plot_experiment_data(
@@ -505,6 +550,18 @@ if __name__ == "__main__":
             'cmnist_c_acc': means['cmnist_c_acc'],
             'std_dev_cmnist_c': std_devs['cmnist_c_acc']
         }
+
+        plot_metrics_per_epoch(
+            epochs=means['epochs'],
+            accuracy=means['val_acc'],
+            bias_aligned_acc=means['bias_aligned_acc'],
+            bias_conflicting_acc=means['bias_conflicting_acc'],
+            std_acc=std_devs['val_acc'],
+            std_bias_aligned=std_devs['bias_aligned_acc'],
+            std_bias_conflicting=std_devs['bias_conflicting_acc'],
+            title=f'CL Metrics Across Epochs - {optimizer} - {exp_name}',
+            save_path=f'final_graphs/CL_metrics_across_epochs_{exp_name}_{optimizer}.png'
+        )
     # Plot validation accuracy across all experiments
     print('Centralized MNIST accuracies')
     plot_experiment_data(
